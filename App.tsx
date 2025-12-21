@@ -1,5 +1,5 @@
 import React from 'react';
-import { StatusBar } from 'react-native';
+import { StatusBar, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GameProvider } from './src/context/GameContext';
@@ -10,6 +10,23 @@ import GameScreen from './src/screens/GameScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 
 const Stack = createNativeStackNavigator();
+
+const HomeButton = ({ onPress }: { onPress: () => void }) => (
+  <TouchableOpacity onPress={onPress} style={styles.homeButton}>
+    <Text style={styles.homeButtonText}>⌂</Text>
+  </TouchableOpacity>
+);
+
+const styles = StyleSheet.create({
+  homeButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  homeButtonText: {
+    color: '#eee',
+    fontSize: 24,
+  },
+});
 
 function App() {
   return (
@@ -35,17 +52,32 @@ function App() {
           <Stack.Screen
             name="GameSetup"
             component={GameSetupScreen}
-            options={{ title: 'Setup Game' }}
+            options={({ navigation }) => ({
+              title: 'Setup Game',
+              headerLeft: () => (
+                <HomeButton onPress={() => navigation.navigate('Home')} />
+              ),
+            })}
           />
           <Stack.Screen
             name="Game"
             component={GameScreen}
-            options={{ title: 'Game' }}
+            options={({ navigation }) => ({
+              title: 'Game',
+              headerLeft: () => (
+                <HomeButton onPress={() => navigation.navigate('Home')} />
+              ),
+            })}
           />
           <Stack.Screen
             name="History"
             component={HistoryScreen}
-            options={{ title: 'Scoreboard' }}
+            options={({ navigation }) => ({
+              title: 'Scoreboard',
+              headerLeft: () => (
+                <HomeButton onPress={() => navigation.navigate('Home')} />
+              ),
+            })}
           />
         </Stack.Navigator>
       </NavigationContainer>

@@ -25,6 +25,7 @@ export interface GameConfig {
 
 export interface Game {
   id: string;
+  name?: string;
   config: GameConfig;
   players: Player[];
   rounds: Round[];

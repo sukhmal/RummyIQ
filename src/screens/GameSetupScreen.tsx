@@ -14,6 +14,7 @@ import { GameVariant, GameConfig, Player, PoolType } from '../types/game';
 
 const GameSetupScreen = ({ navigation }: any) => {
   const { createGame, resetGame } = useGame();
+  const [gameName, setGameName] = useState<string>('');
   const [variant, setVariant] = useState<GameVariant>('pool');
   const [poolLimit, setPoolLimit] = useState<PoolType>(250);
   const [pointValue, setPointValue] = useState<number>(1);
@@ -58,7 +59,7 @@ const GameSetupScreen = ({ navigation }: any) => {
     };
 
     resetGame();
-    createGame(config, validPlayers);
+    createGame(config, validPlayers, gameName.trim() || undefined);
     navigation.navigate('Game');
   };
 
@@ -66,6 +67,17 @@ const GameSetupScreen = ({ navigation }: any) => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Game Setup</Text>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Game Name (Optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={gameName}
+            onChangeText={setGameName}
+            placeholder="e.g., Friday Night Rummy"
+            placeholderTextColor="#666"
+          />
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Game Variant</Text>

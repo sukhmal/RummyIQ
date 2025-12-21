@@ -4,20 +4,25 @@ import { Game, GameConfig, Player, Round, ScoreInput } from '../types/game';
 
 interface GameContextType {
   currentGame: Game | null;
-  createGame: (config: GameConfig, players: Player[]) => void;
+  gameHistory: Game[];
+  createGame: (config: GameConfig, players: Player[], name?: string) => void;
   addRound: (scores: ScoreInput[]) => void;
   resetGame: () => void;
   loadGame: () => Promise<void>;
+  deleteGameFromHistory: (gameId: string) => void;
+  clearHistory: () => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [currentGame, setCurrentGame] = useState<Game | null>(null);
+  const [gameHistory, setGameHistory] = useState<Game[]>([]);
 
-  const createGame = (config: GameConfig, players: Player[]) => {
+  const createGame = (config: GameConfig, players: Player[], name?: string) => {
     const newGame: Game = {
       id: Date.now().toString(),
+      name: name || undefined,
       config,
       players: players.map(p => ({ ...p, score: 0 })),
       rounds: [],
@@ -111,6 +116,23 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const saveGame = async (game: Game) => {
     try {
       await AsyncStorage.setItem('currentGame', JSON.stringify(game));
+
+      // If game is completed, add to history
+      if (game.winner) {
+        const history = await AsyncStorage.getItem('gameHistory');
+        const existingHistory: Game[] = history ? JSON.parse(history) : [];
+
+        // Check if game already exists in history
+        const gameIndex = existingHistory.findIndex(g => g.id === game.id);
+        if (gameIndex >= 0) {
+          existingHistory[gameIndex] = game;
+        } else {
+          existingHistory.unshift(game); // Add to beginning
+        }
+
+        await AsyncStorage.setItem('gameHistory', JSON.stringify(existingHistory));
+        setGameHistory(existingHistory);
+      }
     } catch (error) {
       console.error('Error saving game:', error);
     }
@@ -123,8 +145,33 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         const game = JSON.parse(savedGame);
         setCurrentGame(game);
       }
+
+      // Load history
+      const history = await AsyncStorage.getItem('gameHistory');
+      if (history) {
+        setGameHistory(JSON.parse(history));
+      }
     } catch (error) {
       console.error('Error loading game:', error);
+    }
+  };
+
+  const deleteGameFromHistory = async (gameId: string) => {
+    try {
+      const updatedHistory = gameHistory.filter(g => g.id !== gameId);
+      await AsyncStorage.setItem('gameHistory', JSON.stringify(updatedHistory));
+      setGameHistory(updatedHistory);
+    } catch (error) {
+      console.error('Error deleting game:', error);
+    }
+  };
+
+  const clearHistory = async () => {
+    try {
+      await AsyncStorage.removeItem('gameHistory');
+      setGameHistory([]);
+    } catch (error) {
+      console.error('Error clearing history:', error);
     }
   };
 
@@ -132,10 +179,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     <GameContext.Provider
       value={{
         currentGame,
+        gameHistory,
         createGame,
         addRound,
         resetGame,
         loadGame,
+        deleteGameFromHistory,
+        clearHistory,
       }}>
       {children}
     </GameContext.Provider>

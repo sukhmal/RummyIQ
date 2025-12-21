@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,52 +7,92 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { useGame } from '../context/GameContext';
 import { ScoreInput } from '../types/game';
+import FireworksModal from '../components/FireworksModal';
+
+// States: 0 = default (25 drop), 1 = winner (0), 2 = custom score, 3 = invalid declaration (80)
+type PlayerState = 0 | 1 | 2 | 3;
 
 const GameScreen = ({ navigation }: any) => {
   const { currentGame, addRound } = useGame();
-  const [roundScores, setRoundScores] = useState<{
-    [playerId: string]: { points: number; isDeclared: boolean; hasInvalidDeclaration: boolean };
-  }>({});
+  const [playerStates, setPlayerStates] = useState<{ [playerId: string]: PlayerState }>({});
+  const [customScores, setCustomScores] = useState<{ [playerId: string]: number }>({});
+  const [showFireworks, setShowFireworks] = useState(false);
+  const [gameWinnerName, setGameWinnerName] = useState('');
+  const inputRefs = useRef<{ [playerId: string]: TextInput | null }>({});
 
   if (!currentGame) {
     navigation.navigate('Home');
     return null;
   }
 
-  const updateScore = (playerId: string, points: string) => {
-    setRoundScores({
-      ...roundScores,
-      [playerId]: {
-        ...roundScores[playerId],
-        points: parseInt(points) || 0,
-      },
+  const hasWinner = Object.values(playerStates).includes(1);
+  const hasInvalidDeclaration = Object.values(playerStates).includes(3);
+  const roundStarter = hasWinner || hasInvalidDeclaration;
+
+  const cyclePlayerState = (playerId: string) => {
+    const currentState = playerStates[playerId] || 0;
+    const newStates = { ...playerStates };
+
+    // Check if THIS player is the current winner or invalid
+    const isRoundStarter = currentState === 1 || currentState === 3;
+
+    if (isRoundStarter) {
+      // Tapping the winner/invalid cycles: Winner -> Invalid -> Clear
+      if (currentState === 1) {
+        newStates[playerId] = 3; // Winner -> Invalid
+      } else {
+        newStates[playerId] = 0; // Invalid -> Clear
+      }
+    } else if (!roundStarter) {
+      // No winner/invalid yet - first tap sets winner
+      newStates[playerId] = 1;
+    } else {
+      // Cycle losers: 0 (drop 25) -> 2 (custom) -> 0
+      const loserCycle: PlayerState[] = [0, 2];
+      const currentIndex = loserCycle.indexOf(currentState);
+      const nextIndex = (currentIndex + 1) % loserCycle.length;
+      newStates[playerId] = loserCycle[nextIndex];
+
+      // Focus the input when entering custom state
+      if (loserCycle[nextIndex] === 2) {
+        setTimeout(() => {
+          inputRefs.current[playerId]?.focus();
+        }, 100);
+      }
+    }
+
+    setPlayerStates(newStates);
+  };
+
+  const updateCustomScore = (playerId: string, points: string) => {
+    setCustomScores({
+      ...customScores,
+      [playerId]: parseInt(points) || 0,
     });
   };
 
-  const toggleDeclared = (playerId: string) => {
-    setRoundScores({
-      ...roundScores,
-      [playerId]: {
-        ...roundScores[playerId],
-        isDeclared: !roundScores[playerId]?.isDeclared,
-        hasInvalidDeclaration: false,
-      },
-    });
+  const getPlayerScore = (playerId: string): number => {
+    const state = playerStates[playerId] || 0;
+    switch (state) {
+      case 0: return 25; // Drop
+      case 1: return 0;  // Winner
+      case 2: return customScores[playerId] ?? 0; // Custom
+      case 3: return 80; // Invalid declaration
+      default: return 25;
+    }
   };
 
-  const toggleInvalidDeclaration = (playerId: string) => {
-    setRoundScores({
-      ...roundScores,
-      [playerId]: {
-        ...roundScores[playerId],
-        hasInvalidDeclaration: !roundScores[playerId]?.hasInvalidDeclaration,
-        isDeclared: roundScores[playerId]?.hasInvalidDeclaration ? false : roundScores[playerId]?.isDeclared,
-      },
-    });
+  const getStateLabel = (state: PlayerState): string => {
+    switch (state) {
+      case 0: return 'Drop';
+      case 1: return 'Winner';
+      case 2: return 'Custom';
+      case 3: return 'Invalid';
+      default: return 'Drop';
+    }
   };
 
   const submitRound = () => {
@@ -60,16 +100,16 @@ const GameScreen = ({ navigation }: any) => {
       .filter(p => !p.isEliminated)
       .map(p => ({
         playerId: p.id,
-        points: roundScores[p.id]?.points || 0,
-        isDeclared: roundScores[p.id]?.isDeclared || false,
-        hasInvalidDeclaration: roundScores[p.id]?.hasInvalidDeclaration || false,
+        points: getPlayerScore(p.id),
+        isDeclared: playerStates[p.id] === 1,
+        hasInvalidDeclaration: playerStates[p.id] === 3,
       }));
 
     const declaredCount = scores.filter(s => s.isDeclared).length;
     const invalidDeclarationCount = scores.filter(s => s.hasInvalidDeclaration).length;
 
     if (declaredCount === 0 && invalidDeclarationCount === 0) {
-      Alert.alert('Error', 'Please mark the winner or an invalid declaration');
+      Alert.alert('Error', 'Please mark a winner (tap player name)');
       return;
     }
 
@@ -78,14 +118,36 @@ const GameScreen = ({ navigation }: any) => {
       return;
     }
 
-    addRound(scores);
-    setRoundScores({});
+    // Check if this round will end the game (for pool rummy)
+    let winnerName: string | null = null;
+    if (currentGame.config.variant === 'pool' && currentGame.config.poolLimit) {
+      const playersAfterRound = currentGame.players
+        .filter(p => !p.isEliminated)
+        .map(p => ({
+          ...p,
+          newScore: p.score + getPlayerScore(p.id),
+        }))
+        .filter(p => p.newScore < currentGame.config.poolLimit!);
 
-    if (currentGame.winner) {
-      Alert.alert('Game Over!', 'Check the results screen', [
-        { text: 'View Results', onPress: () => navigation.navigate('History') },
-      ]);
+      if (playersAfterRound.length === 1) {
+        winnerName = playersAfterRound[0].name;
+      }
     }
+
+    addRound(scores);
+    setPlayerStates({});
+    setCustomScores({});
+
+    if (winnerName || currentGame.winner) {
+      const winner = winnerName || currentGame.players.find(p => p.id === currentGame.winner)?.name;
+      setGameWinnerName(winner || 'Unknown');
+      setShowFireworks(true);
+    }
+  };
+
+  const handleFireworksClose = () => {
+    setShowFireworks(false);
+    navigation.navigate('History');
   };
 
   const activePlayers = currentGame.players.filter(p => !p.isEliminated);
@@ -105,79 +167,66 @@ const GameScreen = ({ navigation }: any) => {
         </View>
 
         <View style={styles.scoreTable}>
+          <Text style={styles.tableHint}>
+            {roundStarter ? 'Tap to cycle: Drop → Custom' : 'Tap to select: Winner → Invalid'}
+          </Text>
           <View style={styles.tableHeader}>
             <Text style={[styles.headerText, styles.nameColumn]}>Player</Text>
+            <Text style={[styles.headerText, styles.stateColumn]}>Status</Text>
             <Text style={[styles.headerText, styles.scoreColumn]}>Total</Text>
-            <Text style={[styles.headerText, styles.inputColumn]}>Points</Text>
+            <Text style={[styles.headerText, styles.inputColumn]}>Pts</Text>
           </View>
 
-          {activePlayers.map(player => (
-            <View key={player.id} style={styles.playerRow}>
-              <View style={styles.nameColumn}>
-                <Text style={styles.playerName}>{player.name}</Text>
-              </View>
-              <View style={styles.scoreColumn}>
-                <Text style={styles.totalScore}>{player.score}</Text>
-              </View>
-              <View style={styles.inputColumn}>
-                <TextInput
-                  style={styles.scoreInput}
-                  value={roundScores[player.id]?.points?.toString() || ''}
-                  onChangeText={text => updateScore(player.id, text)}
-                  keyboardType="numeric"
-                  placeholder="0"
-                  placeholderTextColor="#666"
-                />
-              </View>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Mark Winner</Text>
-          <View style={styles.playerButtons}>
-            {activePlayers.map(player => (
+          {activePlayers.map(player => {
+            const state = playerStates[player.id] || 0;
+            return (
               <TouchableOpacity
                 key={player.id}
                 style={[
-                  styles.playerButton,
-                  roundScores[player.id]?.isDeclared && styles.playerButtonActive,
+                  styles.playerRow,
+                  state === 1 && styles.playerRowWinner,
+                  state === 3 && styles.playerRowInvalid,
                 ]}
-                onPress={() => toggleDeclared(player.id)}>
-                <Text
-                  style={[
-                    styles.playerButtonText,
-                    roundScores[player.id]?.isDeclared && styles.playerButtonTextActive,
+                onPress={() => cyclePlayerState(player.id)}>
+                <View style={styles.nameColumn}>
+                  <Text style={[
+                    styles.playerName,
+                    state === 1 && styles.playerNameWinner,
+                    state === 3 && styles.playerNameInvalid,
                   ]}>
-                  {player.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Invalid Declaration (80 pts)</Text>
-          <View style={styles.playerButtons}>
-            {activePlayers.map(player => (
-              <TouchableOpacity
-                key={player.id}
-                style={[
-                  styles.playerButton,
-                  styles.invalidButton,
-                  roundScores[player.id]?.hasInvalidDeclaration && styles.invalidButtonActive,
-                ]}
-                onPress={() => toggleInvalidDeclaration(player.id)}>
-                <Text
-                  style={[
-                    styles.playerButtonText,
-                    roundScores[player.id]?.hasInvalidDeclaration && styles.invalidButtonTextActive,
+                    {player.name}
+                  </Text>
+                </View>
+                <View style={styles.stateColumn}>
+                  <Text style={[
+                    styles.stateText,
+                    state === 1 && styles.stateTextWinner,
+                    state === 3 && styles.stateTextInvalid,
                   ]}>
-                  {player.name}
-                </Text>
+                    {getStateLabel(state)}
+                  </Text>
+                </View>
+                <View style={styles.scoreColumn}>
+                  <Text style={styles.totalScore}>{player.score}</Text>
+                </View>
+                <View style={styles.inputColumn}>
+                  {state === 2 ? (
+                    <TextInput
+                      ref={ref => { inputRefs.current[player.id] = ref; }}
+                      style={styles.scoreInput}
+                      value={customScores[player.id]?.toString() || ''}
+                      onChangeText={text => updateCustomScore(player.id, text)}
+                      keyboardType="numeric"
+                      placeholder="0"
+                      placeholderTextColor="#666"
+                    />
+                  ) : (
+                    <Text style={styles.pointsDisplay}>{getPlayerScore(player.id)}</Text>
+                  )}
+                </View>
               </TouchableOpacity>
-            ))}
-          </View>
+            );
+          })}
         </View>
 
         <TouchableOpacity style={styles.submitButton} onPress={submitRound}>
@@ -190,6 +239,12 @@ const GameScreen = ({ navigation }: any) => {
           <Text style={styles.viewHistoryButtonText}>View Scoreboard</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <FireworksModal
+        visible={showFireworks}
+        winnerName={gameWinnerName}
+        onClose={handleFireworksClose}
+      />
     </SafeAreaView>
   );
 };
@@ -219,6 +274,12 @@ const styles = StyleSheet.create({
   scoreTable: {
     marginBottom: 30,
   },
+  tableHint: {
+    color: '#666',
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
   tableHeader: {
     flexDirection: 'row',
     borderBottomWidth: 2,
@@ -235,25 +296,62 @@ const styles = StyleSheet.create({
   nameColumn: {
     flex: 2,
   },
+  stateColumn: {
+    flex: 1.2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   scoreColumn: {
-    flex: 1,
+    flex: 0.8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   inputColumn: {
-    flex: 1,
+    flex: 0.8,
     alignItems: 'center',
   },
   playerRow: {
     flexDirection: 'row',
     paddingVertical: 12,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#16213e',
+    borderRadius: 8,
+  },
+  playerRowWinner: {
+    backgroundColor: '#1b5e20',
+  },
+  playerRowInvalid: {
+    backgroundColor: '#b71c1c',
   },
   playerName: {
     color: '#eee',
     fontSize: 16,
     fontWeight: '500',
+  },
+  playerNameWinner: {
+    color: '#a5d6a7',
+    fontWeight: 'bold',
+  },
+  playerNameInvalid: {
+    color: '#ffcdd2',
+    fontWeight: 'bold',
+  },
+  stateText: {
+    color: '#888',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  stateTextWinner: {
+    color: '#a5d6a7',
+  },
+  stateTextInvalid: {
+    color: '#ffcdd2',
+  },
+  pointsDisplay: {
+    color: '#eee',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   totalScore: {
     color: '#eee',
@@ -271,47 +369,6 @@ const styles = StyleSheet.create({
     color: '#eee',
     fontSize: 16,
     textAlign: 'center',
-  },
-  section: {
-    marginBottom: 25,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#eee',
-    marginBottom: 12,
-  },
-  playerButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  playerButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#0f3460',
-  },
-  playerButtonActive: {
-    backgroundColor: '#0f3460',
-  },
-  invalidButton: {
-    borderColor: '#d32f2f',
-  },
-  invalidButtonActive: {
-    backgroundColor: '#d32f2f',
-  },
-  playerButtonText: {
-    color: '#0f3460',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  playerButtonTextActive: {
-    color: '#eee',
-  },
-  invalidButtonTextActive: {
-    color: '#fff',
   },
   submitButton: {
     backgroundColor: '#16213e',
