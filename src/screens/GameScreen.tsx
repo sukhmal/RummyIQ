@@ -7,6 +7,9 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  Alert,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useGame } from '../context/GameContext';
 import { ScoreInput } from '../types/game';
@@ -68,10 +71,28 @@ const GameScreen = ({ navigation }: any) => {
   };
 
   const updateCustomScore = (playerId: string, points: string) => {
+    // Only allow digits, limit to 2 characters
+    const digitsOnly = points.replace(/[^0-9]/g, '').slice(0, 2);
+    // Allow empty for typing, but clamp when there's a value
+    if (digitsOnly === '') {
+      setCustomScores({ ...customScores, [playerId]: 0 });
+      return;
+    }
+    const value = parseInt(digitsOnly, 10) || 0;
+    // Clamp to max 80 while typing
+    const clampedValue = Math.min(value, 80);
     setCustomScores({
       ...customScores,
-      [playerId]: parseInt(points) || 0,
+      [playerId]: clampedValue,
     });
+  };
+
+  const enforceMinScore = (playerId: string) => {
+    // Enforce minimum of 2 when user finishes typing
+    const score = customScores[playerId] ?? 0;
+    if (score < 2) {
+      setCustomScores({ ...customScores, [playerId]: 2 });
+    }
   };
 
   const getPlayerScore = (playerId: string): number => {
@@ -79,7 +100,11 @@ const GameScreen = ({ navigation }: any) => {
     switch (state) {
       case 0: return 25; // Drop
       case 1: return 0;  // Winner
-      case 2: return customScores[playerId] ?? 0; // Custom
+      case 2: {
+        // Custom score: enforce valid range 2-80
+        const score = customScores[playerId] ?? 0;
+        return score < 2 ? 2 : score;
+      }
       case 3: return 80; // Invalid declaration
       default: return 25;
     }
@@ -96,11 +121,26 @@ const GameScreen = ({ navigation }: any) => {
   };
 
   const submitRound = () => {
+    // Enforce minimum scores for all custom entries before submitting
+    const updatedScores = { ...customScores };
+    let scoresUpdated = false;
+    currentGame.players.forEach(p => {
+      if (playerStates[p.id] === 2 && (customScores[p.id] ?? 0) < 2) {
+        updatedScores[p.id] = 2;
+        scoresUpdated = true;
+      }
+    });
+    if (scoresUpdated) {
+      setCustomScores(updatedScores);
+    }
+
     const scores: ScoreInput[] = currentGame.players
       .filter(p => !p.isEliminated)
       .map(p => ({
         playerId: p.id,
-        points: getPlayerScore(p.id),
+        points: playerStates[p.id] === 2
+          ? Math.max(2, updatedScores[p.id] ?? 2)
+          : getPlayerScore(p.id),
         isDeclared: playerStates[p.id] === 1,
         hasInvalidDeclaration: playerStates[p.id] === 3,
       }));
@@ -154,8 +194,9 @@ const GameScreen = ({ navigation }: any) => {
   const activePlayers = currentGame.players.filter(p => !p.isEliminated);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={styles.container}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Text style={styles.title}>
             {currentGame.config.variant === 'pool'
@@ -217,8 +258,9 @@ const GameScreen = ({ navigation }: any) => {
                       style={styles.scoreInput}
                       value={customScores[player.id]?.toString() || ''}
                       onChangeText={text => updateCustomScore(player.id, text)}
+                      onBlur={() => enforceMinScore(player.id)}
                       keyboardType="numeric"
-                      placeholder="0"
+                      placeholder="2"
                       placeholderTextColor="#666"
                     />
                   ) : (
@@ -239,14 +281,15 @@ const GameScreen = ({ navigation }: any) => {
           onPress={() => navigation.navigate('History')}>
           <Text style={styles.viewHistoryButtonText}>View Scoreboard</Text>
         </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
 
-      <FireworksModal
-        visible={showFireworks}
-        winnerName={gameWinnerName}
-        onClose={handleFireworksClose}
-      />
-    </SafeAreaView>
+        <FireworksModal
+          visible={showFireworks}
+          winnerName={gameWinnerName}
+          onClose={handleFireworksClose}
+        />
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 
