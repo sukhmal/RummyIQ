@@ -1,7 +1,8 @@
 import React from 'react';
 import { StatusBar, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GameProvider } from './src/context/GameContext';
 
 import HomeScreen from './src/screens/HomeScreen';
@@ -11,11 +12,14 @@ import HistoryScreen from './src/screens/HistoryScreen';
 
 const Stack = createNativeStackNavigator();
 
-const HomeButton = ({ onPress }: { onPress: () => void }) => (
-  <TouchableOpacity onPress={onPress} style={styles.homeButton}>
-    <Text style={styles.homeButtonText}>⌂</Text>
-  </TouchableOpacity>
-);
+const HomeButton = () => {
+  const navigation = useNavigation<any>();
+  return (
+    <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.homeButton}>
+      <Text style={styles.homeButtonText}>⌂</Text>
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
   homeButton: {
@@ -30,8 +34,9 @@ const styles = StyleSheet.create({
 
 function App() {
   return (
-    <GameProvider>
-      <NavigationContainer>
+    <SafeAreaProvider>
+      <GameProvider>
+        <NavigationContainer>
         <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
         <Stack.Navigator
           initialRouteName="Home"
@@ -52,36 +57,31 @@ function App() {
           <Stack.Screen
             name="GameSetup"
             component={GameSetupScreen}
-            options={({ navigation }) => ({
+            options={{
               title: 'Setup Game',
-              headerLeft: () => (
-                <HomeButton onPress={() => navigation.navigate('Home')} />
-              ),
-            })}
+              headerLeft: HomeButton,
+            }}
           />
           <Stack.Screen
             name="Game"
             component={GameScreen}
-            options={({ navigation }) => ({
+            options={{
               title: 'Game',
-              headerLeft: () => (
-                <HomeButton onPress={() => navigation.navigate('Home')} />
-              ),
-            })}
+              headerLeft: HomeButton,
+            }}
           />
           <Stack.Screen
             name="History"
             component={HistoryScreen}
-            options={({ navigation }) => ({
+            options={{
               title: 'Scoreboard',
-              headerLeft: () => (
-                <HomeButton onPress={() => navigation.navigate('Home')} />
-              ),
-            })}
+              headerLeft: HomeButton,
+            }}
           />
         </Stack.Navigator>
-      </NavigationContainer>
-    </GameProvider>
+        </NavigationContainer>
+      </GameProvider>
+    </SafeAreaProvider>
   );
 }
 

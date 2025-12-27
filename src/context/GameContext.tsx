@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Game, GameConfig, Player, Round, ScoreInput } from '../types/game';
 
@@ -139,7 +139,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const loadGame = async () => {
+  const loadGame = useCallback(async () => {
     try {
       const savedGame = await AsyncStorage.getItem('currentGame');
       if (savedGame) {
@@ -155,7 +155,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Error loading game:', error);
     }
-  };
+  }, []);
 
   const deleteGameFromHistory = async (gameId: string) => {
     try {

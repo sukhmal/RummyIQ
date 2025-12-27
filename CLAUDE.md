@@ -48,6 +48,14 @@ npm run lint                      # Run ESLint
 
 **Data Persistence**: AsyncStorage with key 'currentGame', auto-saved on every state change
 
+## Pre-commit Hooks
+
+Uses Husky + lint-staged to validate code before commits:
+- **ESLint**: Catches missing imports, unused variables, and code issues
+- **TypeScript**: Type-checks staged files to catch type errors
+
+Hooks run automatically on `git commit`. To skip (not recommended): `git commit --no-verify`
+
 ## Platform Configuration
 
 - iOS: CocoaPods, Swift (AppDelegate.swift), min iOS via react_native_pods.rb
