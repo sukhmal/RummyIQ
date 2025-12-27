@@ -50,7 +50,7 @@ npm run lint                      # Run ESLint
 
 ## Theming System
 
-**Theme Context** (`src/context/ThemeContext.tsx`): Provides dynamic theming with 5 color themes (Midnight, Light, Ocean Blue, Forest Green, Royal Purple). Theme selection is persisted via AsyncStorage.
+**Theme Context** (`src/context/ThemeContext.tsx`): Provides dynamic theming with 5 color themes (Ocean Blue [default], Midnight, Light, Forest Green, Royal Purple). Theme selection is persisted via AsyncStorage.
 
 **Theme Definitions** (`src/theme/index.ts`):
 - `ThemeColors`: Interface defining all color tokens (background, accent, labels, chart colors, etc.)
