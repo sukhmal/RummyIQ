@@ -4,9 +4,9 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGame } from '../context/GameContext';
 import { Game } from '../types/game';
 
@@ -15,7 +15,7 @@ const HomeScreen = ({ navigation }: any) => {
 
   useEffect(() => {
     loadGame();
-  }, []);
+  }, [loadGame]);
 
   const formatDate = (date: Date | string) => {
     const d = new Date(date);

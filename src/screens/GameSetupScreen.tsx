@@ -5,10 +5,10 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import { useGame } from '../context/GameContext';
 import { GameVariant, GameConfig, Player, PoolType } from '../types/game';
@@ -154,8 +154,8 @@ const GameSetupScreen = ({ navigation }: any) => {
               }}
               style={styles.segmentedControl}
               tintColor="#0f3460"
-              fontStyle={{ color: '#aaa' }}
-              activeFontStyle={{ color: '#fff' }}
+              fontStyle={styles.segmentedControlFont}
+              activeFontStyle={styles.segmentedControlActiveFont}
             />
             {isCustomPoolLimit && (
               <TextInput
@@ -183,7 +183,7 @@ const GameSetupScreen = ({ navigation }: any) => {
             <TextInput
               style={styles.input}
               value={pointValue.toString()}
-              onChangeText={text => setPointValue(parseInt(text) || 1)}
+              onChangeText={text => setPointValue(parseInt(text, 10) || 1)}
               keyboardType="numeric"
               placeholder="Enter point value"
               placeholderTextColor="#666"
@@ -197,7 +197,7 @@ const GameSetupScreen = ({ navigation }: any) => {
             <TextInput
               style={styles.input}
               value={numberOfDeals.toString()}
-              onChangeText={text => setNumberOfDeals(parseInt(text) || 2)}
+              onChangeText={text => setNumberOfDeals(parseInt(text, 10) || 2)}
               keyboardType="numeric"
               placeholder="Enter number of deals"
               placeholderTextColor="#666"
@@ -301,6 +301,12 @@ const styles = StyleSheet.create({
   },
   segmentedControl: {
     height: 40,
+  },
+  segmentedControlFont: {
+    color: '#aaa',
+  },
+  segmentedControlActiveFont: {
+    color: '#fff',
   },
   playerRow: {
     flexDirection: 'row',
