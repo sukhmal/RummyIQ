@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,14 @@ import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
 import { Game } from '../types/game';
 import Icon from '../components/Icon';
-import { ThemeColors, Typography, Spacing, TapTargets, IconSize, themeNames, ThemeName } from '../theme';
+import SettingsModal from '../components/SettingsModal';
+import { ThemeColors, Typography, Spacing, TapTargets, IconSize } from '../theme';
 
 const HomeScreen = ({ navigation }: any) => {
   const { currentGame, gameHistory, loadGame } = useGame();
-  const { colors, themeName, setTheme } = useTheme();
+  const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     loadGame();
@@ -47,10 +49,20 @@ const HomeScreen = ({ navigation }: any) => {
     };
   };
 
-  const themeOptions: ThemeName[] = ['midnight', 'light', 'ocean', 'forest', 'royal'];
-
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header with Settings */}
+      <View style={styles.header}>
+        <View style={styles.headerSpacer} />
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => setShowSettings(true)}
+          accessibilityLabel="Open settings"
+          accessibilityRole="button">
+          <Icon name="gearshape.fill" size={IconSize.large} color={colors.secondaryLabel} weight="medium" />
+        </TouchableOpacity>
+      </View>
+
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Rummy Scorer</Text>
         <Text style={styles.subtitle}>Track your game scores</Text>
@@ -68,35 +80,6 @@ const HomeScreen = ({ navigation }: any) => {
           onPress={() => navigation.navigate('GameSetup')}>
           <Text style={styles.buttonText}>New Game</Text>
         </TouchableOpacity>
-
-        {/* Theme Picker */}
-        <View style={styles.themeSection}>
-          <View style={styles.themeTitleRow}>
-            <Icon name="paintpalette.fill" size={IconSize.medium} color={colors.secondaryLabel} weight="medium" />
-            <Text style={styles.themeTitle}>Theme</Text>
-          </View>
-          <View style={styles.themeOptions}>
-            {themeOptions.map((theme) => (
-              <TouchableOpacity
-                key={theme}
-                style={[
-                  styles.themeButton,
-                  themeName === theme && styles.themeButtonActive,
-                ]}
-                onPress={() => setTheme(theme)}
-                accessibilityLabel={`Select ${themeNames[theme]} theme`}
-                accessibilityRole="button">
-                <Text
-                  style={[
-                    styles.themeButtonText,
-                    themeName === theme && styles.themeButtonTextActive,
-                  ]}>
-                  {themeNames[theme]}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
 
         {gameHistory.length > 0 && (
           <View style={styles.historySection}>
@@ -132,6 +115,11 @@ const HomeScreen = ({ navigation }: any) => {
           </View>
         )}
       </ScrollView>
+
+      <SettingsModal
+        visible={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -140,6 +128,22 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+  },
+  headerSpacer: {
+    width: TapTargets.minimum,
+  },
+  settingsButton: {
+    width: TapTargets.minimum,
+    height: TapTargets.minimum,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     flexGrow: 1,
@@ -186,46 +190,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.accent,
     fontSize: 18,
     fontWeight: '600',
-  },
-  themeSection: {
-    width: '100%',
-    marginTop: Spacing.xl,
-  },
-  themeTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  themeTitle: {
-    ...Typography.title3,
-    color: colors.label,
-  },
-  themeOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-  },
-  themeButton: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: colors.accent,
-    backgroundColor: 'transparent',
-  },
-  themeButtonActive: {
-    backgroundColor: colors.accent,
-  },
-  themeButtonText: {
-    color: colors.accent,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  themeButtonTextActive: {
-    color: colors.labelLight,
   },
   historySection: {
     width: '100%',
