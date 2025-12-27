@@ -423,6 +423,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   gameInfoRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
     gap: Spacing.sm,

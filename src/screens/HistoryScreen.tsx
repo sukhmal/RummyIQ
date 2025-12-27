@@ -283,9 +283,6 @@ const HistoryScreen = ({ navigation, route }: any) => {
 
             {[...displayGame.rounds].reverse().map((round, index) => {
               const roundNumber = displayGame.rounds.length - index;
-              const roundWinner = round.winner
-                ? displayGame.players.find(p => p.id === round.winner)
-                : null;
 
               return (
                 <View key={round.id} style={styles.roundCard}>
@@ -293,12 +290,6 @@ const HistoryScreen = ({ navigation, route }: any) => {
                     <View style={styles.roundNumberBadge}>
                       <Text style={styles.roundNumberText}>R{roundNumber}</Text>
                     </View>
-                    {roundWinner && (
-                      <View style={styles.roundWinnerBadge}>
-                        <Icon name="crown.fill" size={12} color={colors.gold} weight="medium" />
-                        <Text style={styles.roundWinnerText}>{roundWinner.name}</Text>
-                      </View>
-                    )}
                   </View>
                   <View style={styles.roundScores}>
                     {displayGame.players.map((player, playerIndex) => {
@@ -312,12 +303,17 @@ const HistoryScreen = ({ navigation, route }: any) => {
                             styles.roundScoreRow,
                             !isLastPlayer && styles.roundScoreRowBorder,
                           ]}>
-                          <Text style={[
-                            styles.roundPlayerName,
-                            isRoundWinner && styles.roundPlayerNameWinner,
-                          ]}>
-                            {player.name}
-                          </Text>
+                          <View style={styles.roundPlayerNameRow}>
+                            <Text style={[
+                              styles.roundPlayerName,
+                              isRoundWinner && styles.roundPlayerNameWinner,
+                            ]}>
+                              {player.name}
+                            </Text>
+                            {isRoundWinner && (
+                              <Icon name="crown.fill" size={12} color={colors.gold} weight="medium" />
+                            )}
+                          </View>
                           <Text style={[
                             styles.roundPlayerScore,
                             isRoundWinner && styles.roundPlayerScoreWinner,
@@ -652,16 +648,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontWeight: '700',
     color: colors.tint,
   },
-  roundWinnerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  roundWinnerText: {
-    ...Typography.footnote,
-    fontWeight: '600',
-    color: colors.gold,
-  },
   roundScores: {
     padding: Spacing.md,
   },
@@ -676,6 +662,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderBottomColor: colors.separator,
     paddingBottom: Spacing.xs,
     marginBottom: Spacing.xs,
+  },
+  roundPlayerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   roundPlayerName: {
     ...Typography.footnote,
