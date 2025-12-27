@@ -119,6 +119,7 @@ const GameScreen = ({ navigation }: any) => {
     }
 
     // Check if this round will end the game (for pool rummy)
+    // Player is eliminated when score > poolLimit (survives at exactly the limit)
     let winnerName: string | null = null;
     if (currentGame.config.variant === 'pool' && currentGame.config.poolLimit) {
       const playersAfterRound = currentGame.players
@@ -127,7 +128,7 @@ const GameScreen = ({ navigation }: any) => {
           ...p,
           newScore: p.score + getPlayerScore(p.id),
         }))
-        .filter(p => p.newScore < currentGame.config.poolLimit!);
+        .filter(p => p.newScore <= currentGame.config.poolLimit!);
 
       if (playersAfterRound.length === 1) {
         winnerName = playersAfterRound[0].name;
