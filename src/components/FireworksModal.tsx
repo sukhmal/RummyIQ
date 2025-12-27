@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,9 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
+import Icon from './Icon';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeColors, Spacing, IconSize } from '../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -38,6 +41,8 @@ const FireworksModal = ({
   winnerName: string;
   onClose: () => void;
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [fireworks, setFireworks] = useState<Firework[]>([]);
   const fireworkIdRef = useRef(0);
   const titleScale = useRef(new Animated.Value(0)).current;
@@ -150,7 +155,7 @@ const FireworksModal = ({
         titleOpacity.setValue(0);
       };
     }
-  }, [visible]);
+  }, [visible, titleOpacity, titleScale]);
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -192,10 +197,16 @@ const FireworksModal = ({
               transform: [{ scale: titleScale }],
             },
           ]}>
-          <Text style={styles.congratsText}>🎉 Congratulations! 🎉</Text>
+          <View style={styles.congratsRow}>
+            <Icon name="party.popper.fill" size={IconSize.large} color={colors.gold} weight="medium" />
+            <Text style={styles.congratsText}>Congratulations!</Text>
+            <Icon name="party.popper.fill" size={IconSize.large} color={colors.gold} weight="medium" />
+          </View>
           <Text style={styles.winnerLabel}>Winner</Text>
           <Text style={styles.winnerName}>{winnerName}</Text>
-          <Text style={styles.trophyText}>🏆</Text>
+          <View style={styles.trophyContainer}>
+            <Icon name="trophy.fill" size={IconSize.xxlarge} color={colors.gold} weight="medium" />
+          </View>
 
           <TouchableOpacity style={styles.button} onPress={onClose}>
             <Text style={styles.buttonText}>View Results</Text>
@@ -206,7 +217,7 @@ const FireworksModal = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
@@ -228,47 +239,50 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     alignItems: 'center',
-    paddingVertical: 30,
-    paddingHorizontal: 40,
-    backgroundColor: 'rgba(26, 26, 46, 0.95)',
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+    backgroundColor: colors.cardBackground,
     borderRadius: 20,
     borderWidth: 3,
-    borderColor: '#ffd700',
-    marginHorizontal: 15,
+    borderColor: colors.gold,
+    marginHorizontal: Spacing.md,
     minWidth: 280,
+  },
+  congratsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.lg,
   },
   congratsText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#ffd700',
-    marginBottom: 20,
+    color: colors.gold,
     textAlign: 'center',
-    flexShrink: 0,
   },
   winnerLabel: {
     fontSize: 18,
-    color: '#aaa',
+    color: colors.secondaryLabel,
     marginBottom: 5,
   },
   winnerName: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 10,
+    color: colors.label,
+    marginBottom: Spacing.sm,
   },
-  trophyText: {
-    fontSize: 60,
-    marginVertical: 20,
+  trophyContainer: {
+    marginVertical: Spacing.lg,
   },
   button: {
-    backgroundColor: '#ffd700',
-    paddingHorizontal: 40,
-    paddingVertical: 15,
+    backgroundColor: colors.gold,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
     borderRadius: 25,
-    marginTop: 10,
+    marginTop: Spacing.sm,
   },
   buttonText: {
-    color: '#1a1a2e',
+    color: colors.background,
     fontSize: 18,
     fontWeight: 'bold',
   },

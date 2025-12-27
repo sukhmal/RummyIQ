@@ -48,6 +48,25 @@ npm run lint                      # Run ESLint
 
 **Data Persistence**: AsyncStorage with key 'currentGame', auto-saved on every state change
 
+## Theming System
+
+**Theme Context** (`src/context/ThemeContext.tsx`): Provides dynamic theming with 5 color themes (Ocean Blue [default], Midnight, Light, Forest Green, Royal Purple). Theme selection is persisted via AsyncStorage.
+
+**Theme Definitions** (`src/theme/index.ts`):
+- `ThemeColors`: Interface defining all color tokens (background, accent, labels, chart colors, etc.)
+- `themes`: Record of all 5 themes
+- `Typography`: iOS Dynamic Type scale constants
+- `Spacing`: 4-point grid system (xs=4, sm=8, md=16, lg=24, xl=32)
+- `IconSize`: Standardized icon sizes (small=16, medium=20, large=24, xlarge=40, xxlarge=60)
+
+**Icons**: Uses SF Symbols via `react-native-sfsymbols` with `src/components/Icon.tsx` wrapper. All icons follow Apple HIG with 44pt minimum tap targets.
+
+**Usage Pattern**: Components use `useTheme()` hook and `createStyles(colors)` function for dynamic styling:
+```typescript
+const { colors } = useTheme();
+const styles = useMemo(() => createStyles(colors), [colors]);
+```
+
 ## Pre-commit Hooks
 
 Uses Husky + lint-staged to validate code before commits:

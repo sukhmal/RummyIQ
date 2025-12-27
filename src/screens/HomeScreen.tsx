@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGame } from '../context/GameContext';
+import { useTheme } from '../context/ThemeContext';
 import { Game } from '../types/game';
+import Icon from '../components/Icon';
+import SettingsModal from '../components/SettingsModal';
+import { ThemeColors, Typography, Spacing, TapTargets, IconSize, BorderRadius } from '../theme';
 
 const HomeScreen = ({ navigation }: any) => {
   const { currentGame, gameHistory, loadGame } = useGame();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     loadGame();
@@ -22,8 +29,6 @@ const HomeScreen = ({ navigation }: any) => {
     return d.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     });
   };
 
@@ -44,155 +49,313 @@ const HomeScreen = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Rummy Scorer</Text>
-        <Text style={styles.subtitle}>Track your game scores</Text>
-
-        {currentGame && !currentGame.winner ? (
-          <TouchableOpacity
-            style={[styles.button, styles.primaryButton]}
-            onPress={() => navigation.navigate('Game')}>
-            <Text style={styles.buttonText}>Continue Game</Text>
-          </TouchableOpacity>
-        ) : null}
-
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerSpacer} />
         <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={() => navigation.navigate('GameSetup')}>
-          <Text style={styles.buttonText}>New Game</Text>
+          style={styles.settingsButton}
+          onPress={() => setShowSettings(true)}
+          accessibilityLabel="Open settings"
+          accessibilityRole="button">
+          <Icon name="gearshape.fill" size={IconSize.large} color={colors.secondaryLabel} weight="medium" />
         </TouchableOpacity>
+      </View>
 
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}>
+
+        {/* Hero Section */}
+        <View style={styles.heroSection}>
+          <View style={styles.logoContainer}>
+            <Icon name="suit.spade.fill" size={48} color={colors.accent} weight="medium" />
+          </View>
+          <Text style={styles.title}>Rummy Scorer</Text>
+          <Text style={styles.subtitle}>Track scores like a pro</Text>
+        </View>
+
+        {/* Action Cards */}
+        <View style={styles.actionsSection}>
+          {currentGame && !currentGame.winner && (
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('Game')}
+              accessibilityLabel="Continue current game"
+              accessibilityRole="button">
+              <View style={[styles.actionIconContainer, { backgroundColor: colors.success + '20' }]}>
+                <Icon name="play.fill" size={IconSize.large} color={colors.success} weight="medium" />
+              </View>
+              <View style={styles.actionContent}>
+                <Text style={styles.actionTitle}>Continue Game</Text>
+                <Text style={styles.actionSubtitle}>
+                  Round {currentGame.rounds.length + 1} • {currentGame.players.filter(p => !p.isEliminated).length} players
+                </Text>
+              </View>
+              <Icon name="chevron.right" size={IconSize.medium} color={colors.tertiaryLabel} weight="semibold" />
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('GameSetup')}
+            accessibilityLabel="Start a new game"
+            accessibilityRole="button">
+            <View style={[styles.actionIconContainer, { backgroundColor: colors.tint + '20' }]}>
+              <Icon name="plus" size={IconSize.large} color={colors.tint} weight="bold" />
+            </View>
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>New Game</Text>
+              <Text style={styles.actionSubtitle}>Pool, Points, or Deals</Text>
+            </View>
+            <Icon name="chevron.right" size={IconSize.medium} color={colors.tertiaryLabel} weight="semibold" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Past Games Section */}
         {gameHistory.length > 0 && (
           <View style={styles.historySection}>
-            <Text style={styles.historyTitle}>Past Games</Text>
-            {gameHistory.map(game => {
-              const summary = getGameSummary(game);
-              return (
-                <TouchableOpacity
-                  key={game.id}
-                  style={styles.historyCard}
-                  onPress={() => navigation.navigate('History', { gameId: game.id })}>
-                  <View style={styles.historyCardHeader}>
-                    <Text style={styles.historyVariant}>
-                      {game.name || summary.variant}
-                    </Text>
-                    <Text style={styles.historyDate}>
-                      {formatDate(game.completedAt || game.startedAt)}
-                    </Text>
-                  </View>
-                  {game.name && (
-                    <Text style={styles.historyVariantSmall}>{summary.variant}</Text>
-                  )}
-                  <Text style={styles.historyWinner}>Winner: {summary.winner}</Text>
-                  <Text style={styles.historyDetails}>
-                    {summary.players} players • {summary.rounds} rounds
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>RECENT GAMES</Text>
+              <View style={styles.historyBadge}>
+                <Text style={styles.historyBadgeText}>{gameHistory.length}</Text>
+              </View>
+            </View>
+
+            <View style={styles.historyList}>
+              {gameHistory.map((game, index) => {
+                const summary = getGameSummary(game);
+                const isLast = index === gameHistory.length - 1;
+                return (
+                  <TouchableOpacity
+                    key={game.id}
+                    style={[styles.historyItem, !isLast && styles.historyItemBorder]}
+                    onPress={() => navigation.navigate('History', { gameId: game.id })}
+                    accessibilityLabel={`View ${game.name || summary.variant} game`}
+                    accessibilityRole="button">
+                    <View style={styles.historyItemLeft}>
+                      <View style={styles.historyIconContainer}>
+                        <Icon name="trophy.fill" size={IconSize.medium} color={colors.gold} weight="medium" />
+                      </View>
+                      <View style={styles.historyItemContent}>
+                        <Text style={styles.historyItemTitle} numberOfLines={1}>
+                          {game.name || summary.variant}
+                        </Text>
+                        <Text style={styles.historyItemSubtitle}>
+                          {summary.winner} won • {summary.rounds} rounds
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.historyItemRight}>
+                      <Text style={styles.historyDate}>{formatDate(game.completedAt || game.startedAt)}</Text>
+                      <Icon name="chevron.right" size={IconSize.small} color={colors.tertiaryLabel} weight="semibold" />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* Empty State */}
+        {gameHistory.length === 0 && (
+          <View style={styles.emptyState}>
+            <Icon name="gamecontroller.fill" size={40} color={colors.tertiaryLabel} weight="medium" />
+            <Text style={styles.emptyStateText}>No games played yet</Text>
+            <Text style={styles.emptyStateSubtext}>Start a new game to begin tracking!</Text>
           </View>
         )}
       </ScrollView>
+
+      <SettingsModal
+        visible={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+  },
+  headerSpacer: {
+    width: TapTargets.minimum,
+  },
+  settingsButton: {
+    width: TapTargets.minimum,
+    height: TapTargets.minimum,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     flexGrow: 1,
+    padding: Spacing.lg,
+  },
+
+  // Hero Section
+  heroSection: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+    marginBottom: Spacing.lg,
+  },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: colors.cardBackground,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: colors.separator,
   },
   title: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#eee',
-    marginBottom: 10,
+    ...Typography.largeTitle,
+    color: colors.label,
+    marginBottom: Spacing.xs,
   },
   subtitle: {
-    fontSize: 18,
-    color: '#aaa',
-    marginBottom: 60,
+    ...Typography.subheadline,
+    color: colors.secondaryLabel,
   },
-  button: {
-    width: '80%',
-    padding: 18,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginVertical: 10,
+
+  // Action Cards
+  actionsSection: {
+    gap: Spacing.md,
+    marginBottom: Spacing.xl,
   },
-  primaryButton: {
-    backgroundColor: '#16213e',
-    borderWidth: 2,
-    borderColor: '#0f3460',
-  },
-  secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#0f3460',
-  },
-  buttonText: {
-    color: '#eee',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  secondaryButtonText: {
-    color: '#0f3460',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  historySection: {
-    width: '100%',
-    marginTop: 40,
-  },
-  historyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#eee',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  historyCard: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#0f3460',
-  },
-  historyCardHeader: {
+  actionCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
+    backgroundColor: colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.md,
+    gap: Spacing.md,
   },
-  historyVariant: {
-    color: '#4CAF50',
-    fontSize: 14,
+  actionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.medium,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionContent: {
+    flex: 1,
+  },
+  actionTitle: {
+    ...Typography.headline,
+    color: colors.label,
+    marginBottom: 2,
+  },
+  actionSubtitle: {
+    ...Typography.caption1,
+    color: colors.secondaryLabel,
+  },
+
+  // History Section
+  historySection: {
+    flex: 1,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.xs,
+  },
+  sectionLabel: {
+    fontSize: 13,
     fontWeight: '600',
+    color: colors.secondaryLabel,
+    letterSpacing: 0.5,
+  },
+  historyBadge: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  historyBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.label,
+  },
+  historyList: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    overflow: 'hidden',
+  },
+  historyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.md,
+  },
+  historyItemBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.separator,
+  },
+  historyItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: Spacing.md,
+  },
+  historyIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.gold + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  historyItemContent: {
+    flex: 1,
+  },
+  historyItemTitle: {
+    ...Typography.body,
+    fontWeight: '600',
+    color: colors.label,
+    marginBottom: 2,
+  },
+  historyItemSubtitle: {
+    ...Typography.caption1,
+    color: colors.secondaryLabel,
+  },
+  historyItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
   historyDate: {
-    color: '#888',
-    fontSize: 12,
+    ...Typography.caption1,
+    color: colors.tertiaryLabel,
   },
-  historyWinner: {
-    color: '#eee',
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
+
+  // Empty State
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xxl,
   },
-  historyDetails: {
-    color: '#aaa',
-    fontSize: 12,
+  emptyStateText: {
+    ...Typography.headline,
+    color: colors.secondaryLabel,
+    marginTop: Spacing.md,
   },
-  historyVariantSmall: {
-    color: '#888',
-    fontSize: 12,
-    marginBottom: 4,
+  emptyStateSubtext: {
+    ...Typography.caption1,
+    color: colors.tertiaryLabel,
+    marginTop: Spacing.xs,
   },
 });
 

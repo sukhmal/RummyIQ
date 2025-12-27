@@ -5,15 +5,21 @@ A mobile scoring app for Indian Rummy that supports all major variants: Pool Rum
 ## Features
 
 - **Multiple Game Variants**:
-  - Pool Rummy (101/201/250 points, defaults to 250)
+  - Pool Rummy (101/201/250 points or custom limit)
   - Points Rummy
   - Deals Rummy
 - **Player Management**: Add 2-11 players per game
-- **Score Tracking**: Easy round-by-round score entry
+- **Score Tracking**: Easy round-by-round score entry with winner selection
 - **Invalid Declaration Handling**: Automatic 80-point penalty
-- **Game History**: View complete scoreboard and round-by-round breakdown
+- **Game History**: View complete scoreboard, score progression charts, and round-by-round breakdown
 - **Auto-Save**: Game state persists between sessions
-- **Dark Theme**: Eye-friendly dark UI
+- **Multiple Themes**: Choose from 5 beautiful themes:
+  - Ocean Blue (default)
+  - Midnight
+  - Light
+  - Forest Green
+  - Royal Purple
+- **Apple HIG Compliant**: Native iOS controls and SF Symbols throughout
 
 ## Getting Started
 

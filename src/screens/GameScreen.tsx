@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,22 +9,49 @@ import {
   Alert,
   Keyboard,
   TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
+  GestureResponderEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGame } from '../context/GameContext';
+import { useTheme } from '../context/ThemeContext';
 import { ScoreInput } from '../types/game';
 import FireworksModal from '../components/FireworksModal';
+import Icon from '../components/Icon';
+import { ThemeColors, Typography, Spacing, TapTargets, IconSize, BorderRadius } from '../theme';
 
 // States: 0 = default (25 drop), 1 = winner (0), 2 = custom score, 3 = invalid declaration (80)
 type PlayerState = 0 | 1 | 2 | 3;
 
 const GameScreen = ({ navigation }: any) => {
   const { currentGame, addRound } = useGame();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [playerStates, setPlayerStates] = useState<{ [playerId: string]: PlayerState }>({});
   const [customScores, setCustomScores] = useState<{ [playerId: string]: number }>({});
   const [showFireworks, setShowFireworks] = useState(false);
   const [gameWinnerName, setGameWinnerName] = useState('');
   const inputRefs = useRef<{ [playerId: string]: TextInput | null }>({});
+
+  // Track touch position for swipe detection
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+
+  const handleTouchStart = (e: GestureResponderEvent) => {
+    touchStartX.current = e.nativeEvent.pageX;
+    touchStartY.current = e.nativeEvent.pageY;
+  };
+
+  const handleTouchEnd = (e: GestureResponderEvent) => {
+    const deltaX = e.nativeEvent.pageX - touchStartX.current;
+    const deltaY = e.nativeEvent.pageY - touchStartY.current;
+
+    // Swipe left to go to scoreboard (horizontal swipe, not vertical)
+    if (deltaX < -80 && Math.abs(deltaY) < 100) {
+      navigation.navigate('History');
+    }
+  };
 
   if (!currentGame) {
     navigation.navigate('Home');
@@ -193,95 +220,179 @@ const GameScreen = ({ navigation }: any) => {
 
   const activePlayers = currentGame.players.filter(p => !p.isEliminated);
 
+  const getGameTypeLabel = () => {
+    if (currentGame.config.variant === 'pool') {
+      return `Pool ${currentGame.config.poolLimit}`;
+    } else if (currentGame.config.variant === 'deals') {
+      return `Deal ${currentGame.currentDeal}/${currentGame.config.numberOfDeals}`;
+    }
+    return 'Points';
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            {currentGame.config.variant === 'pool'
-              ? `Pool ${currentGame.config.poolLimit}`
-              : currentGame.config.variant === 'deals'
-              ? `Deal ${currentGame.currentDeal}/${currentGame.config.numberOfDeals}`
-              : 'Points Rummy'}
-          </Text>
-          <Text style={styles.subtitle}>Round {currentGame.rounds.length + 1}</Text>
-        </View>
+      <SafeAreaView
+        style={styles.container}
+        edges={['bottom']}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoid}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
 
-        <View style={styles.scoreTable}>
-          <Text style={styles.tableHint}>
-            {roundStarter ? 'Tap to cycle: Drop → Custom' : 'Tap to select: Winner → Invalid'}
-          </Text>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.headerText, styles.nameColumn]}>Player</Text>
-            <Text style={[styles.headerText, styles.stateColumn]}>Status</Text>
-            <Text style={[styles.headerText, styles.scoreColumn]}>Total</Text>
-            <Text style={[styles.headerText, styles.inputColumn]}>Pts</Text>
+          {/* Game Info Header */}
+          <View style={styles.headerSection}>
+            <View style={styles.gameInfoRow}>
+              {currentGame.name && (
+                <View style={styles.infoBadge}>
+                  <Icon name="tag.fill" size={IconSize.small} color={colors.accent} weight="medium" />
+                  <Text style={styles.infoBadgeText}>{currentGame.name}</Text>
+                </View>
+              )}
+              <View style={styles.infoBadge}>
+                <Icon
+                  name={currentGame.config.variant === 'pool' ? 'person.3.fill' : currentGame.config.variant === 'deals' ? 'square.stack.fill' : 'star.fill'}
+                  size={IconSize.small}
+                  color={colors.accent}
+                  weight="medium"
+                />
+                <Text style={styles.infoBadgeText}>{getGameTypeLabel()}</Text>
+              </View>
+              <View style={styles.infoBadge}>
+                <Icon name="arrow.trianglehead.2.clockwise.rotate.90" size={IconSize.small} color={colors.accent} weight="medium" />
+                <Text style={styles.infoBadgeText}>Round {currentGame.rounds.length + 1}</Text>
+              </View>
+            </View>
           </View>
 
-          {activePlayers.map(player => {
-            const state = playerStates[player.id] || 0;
-            return (
-              <TouchableOpacity
-                key={player.id}
-                style={[
-                  styles.playerRow,
-                  state === 1 && styles.playerRowWinner,
-                  state === 3 && styles.playerRowInvalid,
-                ]}
-                onPress={() => cyclePlayerState(player.id)}>
-                <View style={styles.nameColumn}>
-                  <Text style={[
-                    styles.playerName,
-                    state === 1 && styles.playerNameWinner,
-                    state === 3 && styles.playerNameInvalid,
-                  ]}>
-                    {player.name}
-                  </Text>
-                </View>
-                <View style={styles.stateColumn}>
-                  <Text style={[
-                    styles.stateText,
-                    state === 1 && styles.stateTextWinner,
-                    state === 3 && styles.stateTextInvalid,
-                  ]}>
-                    {getStateLabel(state)}
-                  </Text>
-                </View>
-                <View style={styles.scoreColumn}>
-                  <Text style={styles.totalScore}>{player.score}</Text>
-                </View>
-                <View style={styles.inputColumn}>
-                  {state === 2 ? (
-                    <TextInput
-                      ref={ref => { inputRefs.current[player.id] = ref; }}
-                      style={styles.scoreInput}
-                      value={customScores[player.id]?.toString() || ''}
-                      onChangeText={text => updateCustomScore(player.id, text)}
-                      onBlur={() => enforceMinScore(player.id)}
-                      keyboardType="numeric"
-                      placeholder="2"
-                      placeholderTextColor="#666"
-                    />
-                  ) : (
-                    <Text style={styles.pointsDisplay}>{getPlayerScore(player.id)}</Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+          {/* Instructions */}
+          <View style={styles.instructionCard}>
+            <Icon name="hand.tap.fill" size={IconSize.medium} color={colors.secondaryLabel} weight="medium" />
+            <Text style={styles.instructionText}>
+              {roundStarter
+                ? 'Tap player to cycle: Drop → Custom'
+                : 'Tap player to select winner'}
+            </Text>
+          </View>
 
-        <TouchableOpacity style={styles.submitButton} onPress={submitRound}>
-          <Text style={styles.submitButtonText}>Submit Round</Text>
-        </TouchableOpacity>
+          {/* Score Table */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>PLAYERS</Text>
+            <View style={styles.card}>
+              {/* Table Header */}
+              <View style={styles.tableHeader}>
+                <Text style={[styles.headerCell, styles.nameColumn]}>Name</Text>
+                <Text style={[styles.headerCell, styles.statusColumn]}>Status</Text>
+                <Text style={[styles.headerCell, styles.totalColumn]}>Total</Text>
+                <Text style={[styles.headerCell, styles.ptsColumn]}>Pts</Text>
+              </View>
 
-        <TouchableOpacity
-          style={styles.viewHistoryButton}
-          onPress={() => navigation.navigate('History')}>
-          <Text style={styles.viewHistoryButtonText}>View Scoreboard</Text>
-        </TouchableOpacity>
-        </ScrollView>
+              {/* Player Rows */}
+              {activePlayers.map((player, index) => {
+                const state = playerStates[player.id] || 0;
+                const isLast = index === activePlayers.length - 1;
+                const isWinner = state === 1;
+                const isInvalid = state === 3;
+
+                return (
+                  <TouchableOpacity
+                    key={player.id}
+                    style={[
+                      styles.playerRow,
+                      !isLast && styles.playerRowBorder,
+                      isWinner && styles.playerRowWinner,
+                      isInvalid && styles.playerRowInvalid,
+                    ]}
+                    onPress={() => cyclePlayerState(player.id)}
+                    accessibilityLabel={`${player.name}, ${getStateLabel(state)}, total ${player.score}`}
+                    accessibilityRole="button">
+                    {/* Player Name */}
+                    <View style={styles.nameColumn}>
+                      <Text
+                        style={[
+                          styles.playerName,
+                          isWinner && styles.playerNameWinner,
+                          isInvalid && styles.playerNameInvalid,
+                        ]}
+                        numberOfLines={1}>
+                        {player.name}
+                      </Text>
+                    </View>
+
+                    {/* Status Badge */}
+                    <View style={styles.statusColumn}>
+                      <View style={[
+                        styles.statusBadge,
+                        isWinner && styles.statusBadgeWinner,
+                        isInvalid && styles.statusBadgeInvalid,
+                      ]}>
+                        {isWinner && (
+                          <Icon name="checkmark" size={12} color={colors.success} weight="bold" />
+                        )}
+                        {isInvalid && (
+                          <Icon name="xmark" size={12} color={colors.destructive} weight="bold" />
+                        )}
+                        <Text style={[
+                          styles.statusText,
+                          isWinner && styles.statusTextWinner,
+                          isInvalid && styles.statusTextInvalid,
+                        ]}>
+                          {getStateLabel(state)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Total Score */}
+                    <View style={styles.totalColumn}>
+                      <Text style={styles.totalScore}>{player.score}</Text>
+                    </View>
+
+                    {/* Points Input/Display */}
+                    <View style={styles.ptsColumn}>
+                      {state === 2 ? (
+                        <TextInput
+                          ref={ref => { inputRefs.current[player.id] = ref; }}
+                          style={styles.scoreInput}
+                          value={customScores[player.id]?.toString() || ''}
+                          onChangeText={text => updateCustomScore(player.id, text)}
+                          onBlur={() => enforceMinScore(player.id)}
+                          keyboardType="numeric"
+                          placeholder="2"
+                          placeholderTextColor={colors.placeholder}
+                        />
+                      ) : (
+                        <Text style={[
+                          styles.pointsDisplay,
+                          isWinner && styles.pointsDisplayWinner,
+                        ]}>
+                          {getPlayerScore(player.id)}
+                        </Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionSection}>
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={submitRound}
+              accessibilityLabel="Submit round"
+              accessibilityRole="button">
+              <Icon name="checkmark.circle.fill" size={IconSize.medium} color={colors.label} weight="medium" />
+              <Text style={styles.submitButtonText}>Submit Round</Text>
+            </TouchableOpacity>
+          </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
 
         <FireworksModal
           visible={showFireworks}
@@ -293,154 +404,221 @@ const GameScreen = ({ navigation }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: colors.background,
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
   content: {
-    padding: 20,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xxl,
   },
-  header: {
+
+  // Header Section
+  headerSection: {
+    marginBottom: Spacing.md,
+  },
+  gameInfoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 30,
+    gap: Spacing.sm,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#eee',
+  infoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.accent + '20',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.large,
+    gap: Spacing.sm,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#aaa',
-    marginTop: 5,
+  infoBadgeText: {
+    ...Typography.subheadline,
+    fontWeight: '600',
+    color: colors.accent,
   },
-  scoreTable: {
-    marginBottom: 30,
+
+  // Instruction Card
+  instructionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.cardBackground,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    marginBottom: Spacing.lg,
+    gap: Spacing.sm,
   },
-  tableHint: {
-    color: '#666',
-    fontSize: 12,
-    textAlign: 'center',
-    marginBottom: 10,
+  instructionText: {
+    ...Typography.footnote,
+    color: colors.secondaryLabel,
+    flex: 1,
   },
+
+  // Section Styles
+  section: {
+    marginBottom: Spacing.lg,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.secondaryLabel,
+    letterSpacing: 0.5,
+    marginBottom: Spacing.sm,
+    marginLeft: Spacing.xs,
+  },
+
+  // Card Styles
+  card: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    overflow: 'hidden',
+  },
+
+  // Table Header
   tableHeader: {
     flexDirection: 'row',
-    borderBottomWidth: 2,
-    borderBottomColor: '#0f3460',
-    paddingBottom: 10,
-    marginBottom: 10,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.separator,
+    backgroundColor: colors.background,
   },
-  headerText: {
-    color: '#aaa',
-    fontSize: 14,
+  headerCell: {
+    fontSize: 12,
     fontWeight: '600',
+    color: colors.tertiaryLabel,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
+
+  // Column Definitions
   nameColumn: {
     flex: 2,
   },
-  stateColumn: {
-    flex: 1.2,
+  statusColumn: {
+    flex: 1.5,
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  scoreColumn: {
-    flex: 0.8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inputColumn: {
+  totalColumn: {
     flex: 0.8,
     alignItems: 'center',
   },
+  ptsColumn: {
+    flex: 0.8,
+    alignItems: 'center',
+  },
+
+  // Player Row
   playerRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#16213e',
-    borderRadius: 8,
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    minHeight: TapTargets.comfortable,
+  },
+  playerRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.separator,
   },
   playerRowWinner: {
-    backgroundColor: '#1b5e20',
+    backgroundColor: colors.winnerBackground,
   },
   playerRowInvalid: {
-    backgroundColor: '#b71c1c',
+    backgroundColor: colors.invalidBackground,
   },
+
+  // Player Name
   playerName: {
-    color: '#eee',
-    fontSize: 16,
+    ...Typography.body,
     fontWeight: '500',
+    color: colors.label,
   },
   playerNameWinner: {
-    color: '#a5d6a7',
-    fontWeight: 'bold',
+    color: colors.success,
+    fontWeight: '600',
   },
   playerNameInvalid: {
-    color: '#ffcdd2',
-    fontWeight: 'bold',
-  },
-  stateText: {
-    color: '#888',
-    fontSize: 12,
+    color: colors.destructive,
     fontWeight: '600',
   },
-  stateTextWinner: {
-    color: '#a5d6a7',
+
+  // Status Badge
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.small,
+    gap: 4,
   },
-  stateTextInvalid: {
-    color: '#ffcdd2',
+  statusBadgeWinner: {
+    backgroundColor: colors.success + '20',
+  },
+  statusBadgeInvalid: {
+    backgroundColor: colors.destructive + '20',
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.secondaryLabel,
+  },
+  statusTextWinner: {
+    color: colors.success,
+  },
+  statusTextInvalid: {
+    color: colors.destructive,
+  },
+
+  // Scores
+  totalScore: {
+    ...Typography.headline,
+    color: colors.label,
   },
   pointsDisplay: {
-    color: '#eee',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...Typography.body,
+    fontWeight: '600',
+    color: colors.secondaryLabel,
   },
-  totalScore: {
-    color: '#eee',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
+  pointsDisplayWinner: {
+    color: colors.success,
   },
   scoreInput: {
-    backgroundColor: '#16213e',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#0f3460',
-    borderRadius: 8,
-    padding: 8,
-    width: 60,
-    color: '#eee',
-    fontSize: 16,
+    borderColor: colors.tint,
+    borderRadius: BorderRadius.small,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    width: 48,
+    color: colors.label,
+    fontSize: 14,
+    fontWeight: '600',
     textAlign: 'center',
   },
+
+  // Action Section
+  actionSection: {
+    gap: Spacing.sm,
+  },
   submitButton: {
-    backgroundColor: '#16213e',
-    borderWidth: 2,
-    borderColor: '#0f3460',
-    padding: 18,
-    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    justifyContent: 'center',
+    backgroundColor: colors.tint,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+    minHeight: TapTargets.comfortable,
   },
   submitButtonText: {
-    color: '#eee',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  viewHistoryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#0f3460',
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  viewHistoryButtonText: {
-    color: '#0f3460',
-    fontSize: 16,
-    fontWeight: '600',
+    ...Typography.headline,
+    color: colors.label,
   },
 });
 

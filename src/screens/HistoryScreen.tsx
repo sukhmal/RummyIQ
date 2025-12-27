@@ -1,21 +1,45 @@
-import React from 'react';
+import React, { useMemo, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   Dimensions,
+  GestureResponderEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
 import { useGame } from '../context/GameContext';
+import { useTheme } from '../context/ThemeContext';
+import Icon from '../components/Icon';
+import { ThemeColors, Typography, Spacing, TapTargets, IconSize, BorderRadius } from '../theme';
 
 const screenWidth = Dimensions.get('window').width;
 
 const HistoryScreen = ({ navigation, route }: any) => {
-  const { currentGame, gameHistory, resetGame } = useGame();
+  const { currentGame, gameHistory } = useGame();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  // Track touch position for swipe detection
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+
+  const handleTouchStart = (e: GestureResponderEvent) => {
+    touchStartX.current = e.nativeEvent.pageX;
+    touchStartY.current = e.nativeEvent.pageY;
+  };
+
+  const handleTouchEnd = (e: GestureResponderEvent) => {
+    const deltaX = e.nativeEvent.pageX - touchStartX.current;
+    const deltaY = e.nativeEvent.pageY - touchStartY.current;
+
+    // Swipe right to go back to game (if not viewing historical game)
+    if (deltaX > 80 && Math.abs(deltaY) < 100 && !viewingHistoricalGame && !winner) {
+      navigation.goBack();
+    }
+  };
 
   // Check if viewing a past game from history
   const gameId = route?.params?.gameId;
@@ -31,22 +55,9 @@ const HistoryScreen = ({ navigation, route }: any) => {
     return null;
   }
 
-  const handleNewGame = () => {
-    Alert.alert(
-      'Start New Game',
-      'This will clear the current game. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Yes',
-          onPress: () => {
-            resetGame();
-            navigation.navigate('Home');
-          },
-        },
-      ]
-    );
-  };
+  const winner = displayGame.winner
+    ? displayGame.players.find(p => p.id === displayGame.winner)
+    : null;
 
   const getPlayerWins = (playerId: string) => {
     return displayGame.rounds.filter(r => r.winner === playerId).length;
@@ -58,15 +69,9 @@ const HistoryScreen = ({ navigation, route }: any) => {
     return a.score - b.score;
   });
 
-  const winner = displayGame.winner
-    ? displayGame.players.find(p => p.id === displayGame.winner)
-    : null;
-
   // Calculate cumulative scores for the chart
   const getChartData = () => {
     if (displayGame.rounds.length === 0) return null;
-
-    const playerColors = ['#4CAF50', '#2196F3', '#FF9800', '#E91E63', '#9C27B0', '#00BCD4', '#FFEB3B', '#795548', '#607D8B', '#FF5722', '#3F51B5'];
 
     const datasets = displayGame.players.map((player, index) => {
       let cumulative = 0;
@@ -77,7 +82,7 @@ const HistoryScreen = ({ navigation, route }: any) => {
       });
       return {
         data,
-        color: () => playerColors[index % playerColors.length],
+        color: () => colors.chartColors[index % colors.chartColors.length],
         strokeWidth: 2,
       };
     });
@@ -87,152 +92,232 @@ const HistoryScreen = ({ navigation, route }: any) => {
     return {
       labels,
       datasets,
-      legend: displayGame.players.map(p => p.name),
     };
   };
 
   const chartData = getChartData();
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Scoreboard</Text>
+  const getGameTypeLabel = () => {
+    if (displayGame.config.variant === 'pool') {
+      return `Pool ${displayGame.config.poolLimit}`;
+    } else if (displayGame.config.variant === 'deals') {
+      return `${displayGame.config.numberOfDeals} Deals`;
+    }
+    return 'Points';
+  };
 
+  return (
+    <SafeAreaView
+      style={styles.container}
+      edges={['bottom']}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}>
+
+        {/* Winner Banner */}
         {winner && (
           <View style={styles.winnerBanner}>
-            <Text style={styles.winnerTitle}>Winner!</Text>
-            <Text style={styles.winnerName}>{winner.name}</Text>
+            <View style={styles.winnerIconContainer}>
+              <Icon name="trophy.fill" size={36} color={colors.gold} weight="medium" />
+            </View>
+            <View style={styles.winnerContent}>
+              <Text style={styles.winnerLabel}>Winner</Text>
+              <Text style={styles.winnerName}>{winner.name}</Text>
+            </View>
           </View>
         )}
 
-        <View style={styles.gameInfo}>
-          {displayGame.name && (
-            <Text style={styles.gameNameText}>{displayGame.name}</Text>
-          )}
-          <Text style={styles.gameInfoText}>
-            {displayGame.config.variant === 'pool'
-              ? `Pool ${displayGame.config.poolLimit}`
-              : displayGame.config.variant === 'deals'
-              ? `Deals Rummy (${displayGame.config.numberOfDeals} deals)`
-              : 'Points Rummy'}
-          </Text>
-          <Text style={styles.gameInfoText}>Rounds played: {displayGame.rounds.length}</Text>
+        {/* Game Info Badges */}
+        <View style={styles.gameInfoSection}>
+          <View style={styles.gameInfoRow}>
+            {displayGame.name && (
+              <View style={styles.infoBadge}>
+                <Icon name="tag.fill" size={IconSize.small} color={colors.accent} weight="medium" />
+                <Text style={styles.infoBadgeText}>{displayGame.name}</Text>
+              </View>
+            )}
+            <View style={styles.infoBadge}>
+              <Icon
+                name={displayGame.config.variant === 'pool' ? 'person.3.fill' : displayGame.config.variant === 'deals' ? 'square.stack.fill' : 'star.fill'}
+                size={IconSize.small}
+                color={colors.accent}
+                weight="medium"
+              />
+              <Text style={styles.infoBadgeText}>{getGameTypeLabel()}</Text>
+            </View>
+            <View style={styles.infoBadge}>
+              <Icon name="arrow.trianglehead.2.clockwise.rotate.90" size={IconSize.small} color={colors.accent} weight="medium" />
+              <Text style={styles.infoBadgeText}>{displayGame.rounds.length} rounds</Text>
+            </View>
+          </View>
         </View>
 
+        {/* Score Progression Chart */}
         {chartData && (
-          <View style={styles.chartSection}>
-            <Text style={styles.sectionTitle}>Score Progression</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <LineChart
-                data={chartData}
-                width={Math.max(screenWidth - 40, displayGame.rounds.length * 50 + 80)}
-                height={220}
-                chartConfig={{
-                  backgroundColor: '#16213e',
-                  backgroundGradientFrom: '#16213e',
-                  backgroundGradientTo: '#16213e',
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(170, 170, 170, ${opacity})`,
-                  style: {
-                    borderRadius: 12,
-                  },
-                  propsForDots: {
-                    r: '4',
-                    strokeWidth: '2',
-                  },
-                }}
-                bezier
-                style={styles.chart}
-                withInnerLines={false}
-                withOuterLines={true}
-                fromZero={true}
-              />
-            </ScrollView>
-            <View style={styles.legendContainer}>
-              {displayGame.players.map((player, index) => {
-                const playerColors = ['#4CAF50', '#2196F3', '#FF9800', '#E91E63', '#9C27B0', '#00BCD4', '#FFEB3B', '#795548', '#607D8B', '#FF5722', '#3F51B5'];
-                return (
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionLabel}>SCORE PROGRESSION</Text>
+            </View>
+            <View style={styles.chartCard}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <LineChart
+                  data={chartData}
+                  width={Math.max(screenWidth - 48, displayGame.rounds.length * 50 + 80)}
+                  height={200}
+                  chartConfig={{
+                    backgroundColor: colors.cardBackground,
+                    backgroundGradientFrom: colors.cardBackground,
+                    backgroundGradientTo: colors.cardBackground,
+                    decimalPlaces: 0,
+                    color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(235, 235, 245, ${opacity * 0.6})`,
+                    style: {
+                      borderRadius: BorderRadius.large,
+                    },
+                    propsForDots: {
+                      r: '4',
+                      strokeWidth: '2',
+                    },
+                  }}
+                  bezier
+                  style={styles.chart}
+                  withInnerLines={false}
+                  withOuterLines={true}
+                  fromZero={true}
+                />
+              </ScrollView>
+              <View style={styles.legendContainer}>
+                {displayGame.players.map((player, index) => (
                   <View key={player.id} style={styles.legendItem}>
-                    <View style={[styles.legendColor, { backgroundColor: playerColors[index % playerColors.length] }]} />
+                    <View style={[styles.legendDot, { backgroundColor: colors.chartColors[index % colors.chartColors.length] }]} />
                     <Text style={styles.legendText}>{player.name}</Text>
                   </View>
-                );
-              })}
+                ))}
+              </View>
             </View>
           </View>
         )}
 
-        <View style={styles.leaderboard}>
-          <View style={styles.leaderboardHeader}>
-            <Text style={[styles.headerText, styles.rankColumn]}>Rank</Text>
-            <Text style={[styles.headerText, styles.nameColumn]}>Player</Text>
-            <Text style={[styles.headerText, styles.scoreColumn]}>Score</Text>
-            <Text style={[styles.headerText, styles.winsColumn]}>Wins</Text>
-          </View>
-
-          {sortedPlayers.map((player, index) => (
-            <View
-              key={player.id}
-              style={[
-                styles.playerRow,
-                player.isEliminated && styles.eliminatedRow,
-              ]}>
-              <Text style={[styles.rankText, styles.rankColumn]}>
-                {index + 1}
-              </Text>
-              <Text
-                style={[
-                  styles.playerName,
-                  styles.nameColumn,
-                  player.isEliminated && styles.eliminatedText,
-                ]}>
-                {player.name}
-                {player.isEliminated && ' (Out)'}
-              </Text>
-              <Text
-                style={[
-                  styles.scoreText,
-                  styles.scoreColumn,
-                  player.isEliminated && styles.eliminatedText,
-                ]}>
-                {player.score}
-              </Text>
-              <Text style={[styles.winsText, styles.winsColumn]}>
-                {getPlayerWins(player.id)}
-              </Text>
+        {/* Leaderboard */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>LEADERBOARD</Text>
+          <View style={styles.card}>
+            {/* Table Header */}
+            <View style={styles.tableHeader}>
+              <Text style={[styles.headerCell, styles.rankColumn]}>#</Text>
+              <Text style={[styles.headerCell, styles.nameColumn]}>Player</Text>
+              <Text style={[styles.headerCell, styles.scoreColumn]}>Score</Text>
+              <Text style={[styles.headerCell, styles.winsColumn]}>Wins</Text>
             </View>
-          ))}
+
+            {/* Player Rows */}
+            {sortedPlayers.map((player, index) => {
+              const isLast = index === sortedPlayers.length - 1;
+              const isWinner = player.id === displayGame.winner;
+              return (
+                <View
+                  key={player.id}
+                  style={[
+                    styles.leaderboardRow,
+                    !isLast && styles.leaderboardRowBorder,
+                    player.isEliminated && styles.eliminatedRow,
+                  ]}>
+                  <View style={[styles.rankColumn, styles.rankContainer]}>
+                    {index === 0 && !player.isEliminated ? (
+                      <View style={styles.rankBadgeGold}>
+                        <Text style={styles.rankBadgeText}>1</Text>
+                      </View>
+                    ) : index === 1 && !player.isEliminated ? (
+                      <View style={styles.rankBadgeSilver}>
+                        <Text style={styles.rankBadgeText}>{index + 1}</Text>
+                      </View>
+                    ) : index === 2 && !player.isEliminated ? (
+                      <View style={styles.rankBadgeBronze}>
+                        <Text style={styles.rankBadgeText}>{index + 1}</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.rankText}>{index + 1}</Text>
+                    )}
+                  </View>
+                  <View style={styles.nameColumn}>
+                    <Text
+                      style={[
+                        styles.playerName,
+                        player.isEliminated && styles.eliminatedText,
+                        isWinner && styles.winnerTextStyle,
+                      ]}
+                      numberOfLines={1}>
+                      {player.name}
+                    </Text>
+                    {player.isEliminated && (
+                      <Text style={styles.eliminatedLabel}>Eliminated</Text>
+                    )}
+                  </View>
+                  <View style={styles.scoreColumn}>
+                    <Text style={[styles.scoreText, player.isEliminated && styles.eliminatedText]}>
+                      {player.score}
+                    </Text>
+                  </View>
+                  <View style={styles.winsColumn}>
+                    <View style={styles.winsBadge}>
+                      <Text style={styles.winsText}>{getPlayerWins(player.id)}</Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         </View>
 
+        {/* Round History */}
         {displayGame.rounds.length > 0 && (
-          <View style={styles.roundsSection}>
-            <Text style={styles.sectionTitle}>Round History</Text>
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionLabel}>ROUND HISTORY</Text>
+              <View style={styles.roundHistoryBadge}>
+                <Text style={styles.roundHistoryBadgeText}>{displayGame.rounds.length}</Text>
+              </View>
+            </View>
+
             {[...displayGame.rounds].reverse().map((round, index) => {
               const roundNumber = displayGame.rounds.length - index;
-              const roundWinner = round.winner
-                ? displayGame.players.find(p => p.id === round.winner)
-                : null;
 
               return (
                 <View key={round.id} style={styles.roundCard}>
                   <View style={styles.roundHeader}>
-                    <Text style={styles.roundTitle}>Round {roundNumber}</Text>
-                    {roundWinner && (
-                      <Text style={styles.roundWinner}>
-                        Winner: {roundWinner.name}
-                      </Text>
-                    )}
+                    <View style={styles.roundNumberBadge}>
+                      <Text style={styles.roundNumberText}>R{roundNumber}</Text>
+                    </View>
                   </View>
                   <View style={styles.roundScores}>
-                    {displayGame.players.map(player => {
+                    {displayGame.players.map((player, playerIndex) => {
                       const score = round.scores[player.id] || 0;
+                      const isRoundWinner = player.id === round.winner;
+                      const isLastPlayer = playerIndex === displayGame.players.length - 1;
                       return (
-                        <View key={player.id} style={styles.roundScoreRow}>
-                          <Text style={styles.roundPlayerName}>
-                            {player.name}
-                          </Text>
-                          <Text style={styles.roundPlayerScore}>
+                        <View
+                          key={player.id}
+                          style={[
+                            styles.roundScoreRow,
+                            !isLastPlayer && styles.roundScoreRowBorder,
+                          ]}>
+                          <View style={styles.roundPlayerNameRow}>
+                            <Text style={[
+                              styles.roundPlayerName,
+                              isRoundWinner && styles.roundPlayerNameWinner,
+                            ]}>
+                              {player.name}
+                            </Text>
+                            {isRoundWinner && (
+                              <Icon name="crown.fill" size={12} color={colors.gold} weight="medium" />
+                            )}
+                          </View>
+                          <Text style={[
+                            styles.roundPlayerScore,
+                            isRoundWinner && styles.roundPlayerScoreWinner,
+                          ]}>
                             {score > 0 ? `+${score}` : score}
                           </Text>
                         </View>
@@ -245,268 +330,379 @@ const HistoryScreen = ({ navigation, route }: any) => {
           </View>
         )}
 
-        {viewingHistoricalGame ? (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.navigate('Home')}>
-            <Text style={styles.backButtonText}>Back to Home</Text>
-          </TouchableOpacity>
-        ) : (
-          <>
-            {!winner && (
-              <TouchableOpacity
-                style={styles.continueButton}
-                onPress={() => navigation.navigate('Game')}>
-                <Text style={styles.continueButtonText}>Continue Game</Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity style={styles.newGameButton} onPress={handleNewGame}>
-              <Text style={styles.newGameButtonText}>New Game</Text>
+        {/* Action Buttons */}
+        <View style={styles.actionSection}>
+          {viewingHistoricalGame ? (
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => navigation.navigate('Home')}
+              accessibilityLabel="Back to home"
+              accessibilityRole="button">
+              <Icon name="house.fill" size={IconSize.medium} color={colors.label} weight="medium" />
+              <Text style={styles.primaryButtonText}>Back to Home</Text>
             </TouchableOpacity>
-          </>
-        )}
+          ) : !winner ? (
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => navigation.goBack()}
+              accessibilityLabel="Continue game"
+              accessibilityRole="button">
+              <Icon name="play.fill" size={IconSize.medium} color={colors.label} weight="medium" />
+              <Text style={styles.primaryButtonText}>Continue Game</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: colors.background,
   },
   content: {
-    padding: 20,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xxl,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#eee',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
+
+  // Winner Banner
   winnerBanner: {
-    backgroundColor: '#16213e',
-    borderWidth: 3,
-    borderColor: '#ffd700',
-    borderRadius: 12,
-    padding: 20,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    backgroundColor: colors.gold + '15',
+    borderWidth: 2,
+    borderColor: colors.gold,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    gap: Spacing.md,
   },
-  winnerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffd700',
-    marginBottom: 10,
+  winnerIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.gold + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  winnerContent: {
+    flex: 1,
+  },
+  winnerLabel: {
+    ...Typography.caption1,
+    color: colors.gold,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 2,
   },
   winnerName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#eee',
+    ...Typography.title1,
+    color: colors.label,
   },
-  gameInfo: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
+
+  // Game Info Badges
+  gameInfoSection: {
+    marginBottom: Spacing.lg,
   },
-  gameNameText: {
-    color: '#eee',
-    fontSize: 18,
+  gameInfoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+  },
+  infoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.accent + '20',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.large,
+    gap: Spacing.sm,
+  },
+  infoBadgeText: {
+    ...Typography.subheadline,
     fontWeight: '600',
-    marginBottom: 5,
+    color: colors.accent,
   },
-  gameInfoText: {
-    color: '#aaa',
-    fontSize: 14,
-    marginVertical: 3,
+
+  // Section Styles
+  section: {
+    marginBottom: Spacing.lg,
   },
-  chartSection: {
-    marginBottom: 20,
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+    marginLeft: Spacing.xs,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.secondaryLabel,
+    letterSpacing: 0.5,
+  },
+
+  // Chart Card
+  chartCard: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.md,
   },
   chart: {
-    borderRadius: 12,
+    borderRadius: BorderRadius.medium,
   },
   legendContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    marginTop: 10,
-    gap: 10,
+    marginTop: Spacing.md,
+    gap: Spacing.md,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.xs,
   },
-  legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 5,
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   legendText: {
-    color: '#aaa',
-    fontSize: 12,
+    ...Typography.caption1,
+    color: colors.secondaryLabel,
   },
-  leaderboard: {
-    marginBottom: 30,
+
+  // Card Styles
+  card: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    overflow: 'hidden',
   },
-  leaderboardHeader: {
+
+  // Table Header
+  tableHeader: {
     flexDirection: 'row',
-    borderBottomWidth: 2,
-    borderBottomColor: '#0f3460',
-    paddingBottom: 10,
-    marginBottom: 10,
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.separator,
+    backgroundColor: colors.background,
   },
-  headerText: {
-    color: '#aaa',
-    fontSize: 14,
+  headerCell: {
+    fontSize: 12,
     fontWeight: '600',
+    color: colors.tertiaryLabel,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
+
+  // Column Definitions
   rankColumn: {
-    width: 50,
-    textAlign: 'center',
+    width: 44,
+    alignItems: 'center',
+  },
+  rankContainer: {
+    justifyContent: 'center',
   },
   nameColumn: {
     flex: 2,
   },
   scoreColumn: {
     flex: 1,
-    textAlign: 'center',
+    alignItems: 'center',
   },
   winsColumn: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  playerRow: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#16213e',
+    flex: 0.8,
     alignItems: 'center',
+  },
+
+  // Leaderboard Row
+  leaderboardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    minHeight: TapTargets.minimum,
+  },
+  leaderboardRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.separator,
   },
   eliminatedRow: {
     opacity: 0.5,
   },
+
+  // Rank Badges
+  rankBadgeGold: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.gold,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rankBadgeSilver: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#C0C0C0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rankBadgeBronze: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#CD7F32',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rankBadgeText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#000',
+  },
   rankText: {
-    color: '#eee',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...Typography.body,
+    fontWeight: '600',
+    color: colors.secondaryLabel,
   },
+
+  // Player Info
   playerName: {
-    color: '#eee',
-    fontSize: 16,
+    ...Typography.body,
     fontWeight: '500',
+    color: colors.label,
   },
-  scoreText: {
-    color: '#eee',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  winsText: {
-    color: '#0f3460',
-    fontSize: 16,
+  winnerTextStyle: {
+    color: colors.success,
     fontWeight: '600',
   },
   eliminatedText: {
     textDecorationLine: 'line-through',
+    color: colors.tertiaryLabel,
   },
-  roundsSection: {
-    marginTop: 10,
-    marginBottom: 20,
+  eliminatedLabel: {
+    ...Typography.caption2,
+    color: colors.destructive,
+    marginTop: 2,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#eee',
-    marginBottom: 15,
+  scoreText: {
+    ...Typography.headline,
+    color: colors.label,
+  },
+  winsBadge: {
+    backgroundColor: colors.accent + '30',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.small,
+  },
+  winsText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.accent,
+  },
+
+  // Round History
+  roundHistoryBadge: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginRight: Spacing.xs,
+  },
+  roundHistoryBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.label,
   },
   roundCard: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
+    backgroundColor: colors.cardBackground,
+    borderRadius: BorderRadius.large,
+    marginBottom: Spacing.sm,
+    overflow: 'hidden',
   },
   roundHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#0f3460',
+    padding: Spacing.md,
+    backgroundColor: colors.background,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.separator,
   },
-  roundTitle: {
-    color: '#eee',
-    fontSize: 16,
-    fontWeight: 'bold',
+  roundNumberBadge: {
+    backgroundColor: colors.tint + '20',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.small,
   },
-  roundWinner: {
-    color: '#0f3460',
-    fontSize: 14,
-    fontWeight: '600',
+  roundNumberText: {
+    ...Typography.footnote,
+    fontWeight: '700',
+    color: colors.tint,
   },
   roundScores: {
-    gap: 5,
+    padding: Spacing.md,
   },
   roundScoreRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 5,
+    alignItems: 'center',
+    paddingVertical: Spacing.xs,
+  },
+  roundScoreRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.separator,
+    paddingBottom: Spacing.xs,
+    marginBottom: Spacing.xs,
+  },
+  roundPlayerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   roundPlayerName: {
-    color: '#aaa',
-    fontSize: 14,
+    ...Typography.footnote,
+    color: colors.secondaryLabel,
+  },
+  roundPlayerNameWinner: {
+    color: colors.success,
+    fontWeight: '600',
   },
   roundPlayerScore: {
-    color: '#eee',
-    fontSize: 14,
+    ...Typography.footnote,
     fontWeight: '600',
+    color: colors.label,
   },
-  continueButton: {
-    backgroundColor: '#16213e',
-    borderWidth: 2,
-    borderColor: '#0f3460',
-    padding: 18,
-    borderRadius: 12,
+  roundPlayerScoreWinner: {
+    color: colors.success,
+  },
+
+  // Action Buttons
+  actionSection: {
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  primaryButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    justifyContent: 'center',
+    backgroundColor: colors.tint,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+    minHeight: TapTargets.comfortable,
   },
-  continueButtonText: {
-    color: '#eee',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  newGameButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#0f3460',
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  newGameButtonText: {
-    color: '#0f3460',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  backButton: {
-    backgroundColor: '#16213e',
-    borderWidth: 2,
-    borderColor: '#0f3460',
-    padding: 18,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  backButtonText: {
-    color: '#eee',
-    fontSize: 18,
-    fontWeight: '600',
+  primaryButtonText: {
+    ...Typography.headline,
+    color: colors.label,
   },
 });
 
