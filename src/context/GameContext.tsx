@@ -71,7 +71,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
       let isEliminated = player.isEliminated || false;
       if (currentGame.config.variant === 'pool' && currentGame.config.poolLimit) {
-        isEliminated = newScore >= currentGame.config.poolLimit;
+        // Player survives at exactly the limit, eliminated when exceeding it
+        isEliminated = newScore > currentGame.config.poolLimit;
       }
 
       return {

@@ -1,6 +1,6 @@
 export type GameVariant = 'pool' | 'points' | 'deals';
 
-export type PoolType = 101 | 201 | 250;
+export type PoolType = number;
 
 export interface Player {
   id: string;
