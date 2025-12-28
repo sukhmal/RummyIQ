@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,13 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
+import { useSettings } from '../context/SettingsContext';
 import { GameVariant, GameConfig, Player, PoolType } from '../types/game';
 import Icon from '../components/Icon';
 import { ThemeColors, Typography, Spacing, TapTargets, IconSize, BorderRadius } from '../theme';
@@ -30,7 +32,9 @@ const PRESET_POOL_LIMITS = [101, 201, 250] as const;
 const GameSetupScreen = ({ navigation }: any) => {
   const { createGame, resetGame } = useGame();
   const { colors } = useTheme();
+  const { defaults, getEffectiveDefaults, saveLastGameSettings } = useSettings();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [useDefaults, setUseDefaults] = useState<boolean>(true);
   const [gameName, setGameName] = useState<string>('');
   const [variantIndex, setVariantIndex] = useState<number>(0);
   const [poolLimitIndex, setPoolLimitIndex] = useState<number>(2); // Default to 250
@@ -41,17 +45,71 @@ const GameSetupScreen = ({ navigation }: any) => {
     { id: '1', name: '', score: 0 },
     { id: '2', name: '', score: 0 },
   ]);
+  const [initialized, setInitialized] = useState(false);
 
-  const variant = GAME_TYPES[variantIndex].id;
-  const isCustomPoolLimit = poolLimitIndex === 3;
+  // Apply defaults on mount
+  useEffect(() => {
+    if (initialized) return;
 
-  const getPoolLimit = (): PoolType => {
+    const effectiveDefaults = getEffectiveDefaults();
+
+    // Set game type
+    const gameTypeIndex = GAME_TYPES.findIndex(t => t.id === effectiveDefaults.gameType);
+    if (gameTypeIndex >= 0) {
+      setVariantIndex(gameTypeIndex);
+    }
+
+    // Set pool limit
+    const poolLimit = effectiveDefaults.poolLimit;
+    const presetIndex = PRESET_POOL_LIMITS.indexOf(poolLimit as 101 | 201 | 250);
+    if (presetIndex >= 0) {
+      setPoolLimitIndex(presetIndex);
+    } else if (typeof poolLimit === 'number') {
+      setPoolLimitIndex(3); // Custom
+      setCustomPoolLimitText(poolLimit.toString());
+    }
+
+    // Set number of deals
+    setNumberOfDeals(effectiveDefaults.numberOfDeals);
+
+    // Set player count and names
+    const playerCount = effectiveDefaults.playerCount;
+    const playerNames = effectiveDefaults.playerNames || [];
+    const initialPlayers: Player[] = [];
+    for (let i = 0; i < playerCount; i++) {
+      initialPlayers.push({
+        id: (i + 1).toString(),
+        name: playerNames[i] || '',
+        score: 0,
+      });
+    }
+    setPlayers(initialPlayers);
+
+    setInitialized(true);
+  }, [initialized, getEffectiveDefaults]);
+
+  // Get effective variant based on toggle
+  const getEffectiveVariant = (): GameVariant => {
+    return useDefaults ? defaults.gameType : GAME_TYPES[variantIndex].id;
+  };
+
+  const getEffectivePoolLimit = (): PoolType => {
+    if (useDefaults) {
+      return defaults.poolLimit;
+    }
     if (isCustomPoolLimit) {
       const parsed = parseInt(customPoolLimitText, 10);
       return parsed > 0 ? parsed : 250;
     }
     return PRESET_POOL_LIMITS[poolLimitIndex];
   };
+
+  const getEffectiveNumberOfDeals = (): number => {
+    return useDefaults ? defaults.numberOfDeals : numberOfDeals;
+  };
+
+  const variant = GAME_TYPES[variantIndex].id;
+  const isCustomPoolLimit = poolLimitIndex === 3;
 
   const addPlayer = () => {
     if (players.length < 11) {
@@ -80,12 +138,25 @@ const GameSetupScreen = ({ navigation }: any) => {
       return;
     }
 
+    const effectiveVariant = getEffectiveVariant();
+    const effectivePoolLimit = getEffectivePoolLimit();
+    const effectiveDeals = getEffectiveNumberOfDeals();
+
     const config: GameConfig = {
-      variant,
-      ...(variant === 'pool' && { poolLimit: getPoolLimit() }),
-      ...(variant === 'points' && { pointValue }),
-      ...(variant === 'deals' && { numberOfDeals }),
+      variant: effectiveVariant,
+      ...(effectiveVariant === 'pool' && { poolLimit: effectivePoolLimit }),
+      ...(effectiveVariant === 'points' && { pointValue }),
+      ...(effectiveVariant === 'deals' && { numberOfDeals: effectiveDeals }),
     };
+
+    // Save last game settings for "Remember Last Game" feature
+    saveLastGameSettings({
+      gameType: effectiveVariant,
+      poolLimit: effectivePoolLimit,
+      numberOfDeals: effectiveDeals,
+      playerCount: validPlayers.length,
+      playerNames: validPlayers.map(p => p.name),
+    });
 
     resetGame();
     createGame(config, validPlayers, gameName.trim() || undefined);
@@ -94,8 +165,8 @@ const GameSetupScreen = ({ navigation }: any) => {
 
   const validPlayerCount = players.filter(p => p.name.trim() !== '').length;
 
-  const getVariantDescription = () => {
-    switch (variant) {
+  const getVariantDescription = (v: GameVariant) => {
+    switch (v) {
       case 'pool':
         return 'Players are eliminated when they exceed the pool limit. Last player standing wins.';
       case 'points':
@@ -103,6 +174,16 @@ const GameSetupScreen = ({ navigation }: any) => {
       case 'deals':
         return 'Fixed number of deals. Player with lowest total score wins.';
     }
+  };
+
+  const getDefaultsSummary = () => {
+    const v = defaults.gameType;
+    if (v === 'pool') {
+      return `Pool ${defaults.poolLimit}`;
+    } else if (v === 'deals') {
+      return `${defaults.numberOfDeals} Deals`;
+    }
+    return 'Points';
   };
 
   return (
@@ -133,34 +214,55 @@ const GameSetupScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        {/* Game Type Section - Segmented Control */}
+        {/* Use Defaults Toggle */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>GAME TYPE</Text>
-          <View style={styles.segmentedCard}>
-            <SegmentedControl
-              values={GAME_TYPES.map(t => t.label)}
-              selectedIndex={variantIndex}
-              onChange={(event) => setVariantIndex(event.nativeEvent.selectedSegmentIndex)}
-              style={styles.segmentedControl}
-              fontStyle={styles.segmentedFont}
-              activeFontStyle={styles.segmentedActiveFont}
-              tintColor={colors.tint}
-              backgroundColor={colors.cardBackground}
-            />
-            <View style={styles.variantDescriptionContainer}>
-              <Icon
-                name={variant === 'pool' ? 'person.3.fill' : variant === 'deals' ? 'square.stack.fill' : 'star.fill'}
-                size={IconSize.medium}
-                color={colors.tint}
-                weight="medium"
+          <View style={styles.card}>
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleLabelContainer}>
+                <Text style={styles.toggleLabel}>Use Default Settings</Text>
+                <Text style={styles.toggleHint}>{getDefaultsSummary()}</Text>
+              </View>
+              <Switch
+                value={useDefaults}
+                onValueChange={setUseDefaults}
+                trackColor={{ false: colors.separator, true: colors.tint }}
+                thumbColor="#FFFFFF"
+                ios_backgroundColor={colors.separator}
               />
-              <Text style={styles.variantDescription}>{getVariantDescription()}</Text>
             </View>
           </View>
         </View>
 
-        {/* Pool Limit Section - Segmented Control */}
-        {variant === 'pool' && (
+        {/* Game Type Section - Only show when not using defaults */}
+        {!useDefaults && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>GAME TYPE</Text>
+            <View style={styles.segmentedCard}>
+              <SegmentedControl
+                values={GAME_TYPES.map(t => t.label)}
+                selectedIndex={variantIndex}
+                onChange={(event) => setVariantIndex(event.nativeEvent.selectedSegmentIndex)}
+                style={styles.segmentedControl}
+                fontStyle={styles.segmentedFont}
+                activeFontStyle={styles.segmentedActiveFont}
+                tintColor={colors.tint}
+                backgroundColor={colors.cardBackground}
+              />
+              <View style={styles.variantDescriptionContainer}>
+                <Icon
+                  name={variant === 'pool' ? 'person.3.fill' : variant === 'deals' ? 'square.stack.fill' : 'star.fill'}
+                  size={IconSize.medium}
+                  color={colors.tint}
+                  weight="medium"
+                />
+                <Text style={styles.variantDescription}>{getVariantDescription(variant)}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Pool Limit Section - Only show when not using defaults and variant is pool */}
+        {!useDefaults && variant === 'pool' && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>POOL LIMIT</Text>
             <View style={styles.segmentedCard}>
@@ -197,8 +299,8 @@ const GameSetupScreen = ({ navigation }: any) => {
           </View>
         )}
 
-        {/* Points Value Section */}
-        {variant === 'points' && (
+        {/* Points Value Section - Only show when not using defaults */}
+        {!useDefaults && variant === 'points' && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>POINT VALUE</Text>
             <View style={styles.card}>
@@ -218,8 +320,8 @@ const GameSetupScreen = ({ navigation }: any) => {
           </View>
         )}
 
-        {/* Number of Deals Section */}
-        {variant === 'deals' && (
+        {/* Number of Deals Section - Only show when not using defaults */}
+        {!useDefaults && variant === 'deals' && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>NUMBER OF DEALS</Text>
             <View style={styles.card}>
@@ -421,6 +523,28 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     textAlign: 'center',
+  },
+
+  // Toggle Row
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Spacing.md,
+  },
+  toggleLabelContainer: {
+    flex: 1,
+    marginRight: Spacing.md,
+  },
+  toggleLabel: {
+    ...Typography.body,
+    fontWeight: '500',
+    color: colors.label,
+  },
+  toggleHint: {
+    ...Typography.footnote,
+    color: colors.secondaryLabel,
+    marginTop: 2,
   },
 
   // Input Row

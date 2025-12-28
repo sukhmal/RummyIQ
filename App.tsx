@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GameProvider, useGame } from './src/context/GameContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { SettingsProvider } from './src/context/SettingsContext';
 import Icon from './src/components/Icon';
 import { TapTargets, IconSize, Spacing, BorderRadius, Typography } from './src/theme';
 
@@ -152,11 +153,13 @@ function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <GameProvider>
-          <NavigationContainer>
-            <AppNavigator />
-          </NavigationContainer>
-        </GameProvider>
+        <SettingsProvider>
+          <GameProvider>
+            <NavigationContainer>
+              <AppNavigator />
+            </NavigationContainer>
+          </GameProvider>
+        </SettingsProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
