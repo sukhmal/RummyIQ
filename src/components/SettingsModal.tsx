@@ -9,14 +9,18 @@ import {
   Animated,
   Dimensions,
   ScrollView,
+  Switch,
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import Icon from './Icon';
 import { useTheme } from '../context/ThemeContext';
-import { ThemeColors, ThemeName, themeNames, themes, Typography, Spacing, IconSize, BorderRadius } from '../theme';
+import { useSettings } from '../context/SettingsContext';
+import { ThemeColors, ThemeName, themeNames, themes, Typography, Spacing, IconSize, BorderRadius, TapTargets } from '../theme';
+import { GameVariant, PoolType } from '../types/game';
 
 const { height: screenHeight } = Dimensions.get('window');
-const MODAL_HEIGHT = screenHeight * 0.65;
+const MODAL_HEIGHT = screenHeight * 0.85;
 
 interface SettingsModalProps {
   visible: boolean;
@@ -25,8 +29,15 @@ interface SettingsModalProps {
 
 const themeOrder: ThemeName[] = ['midnight', 'light', 'ocean', 'forest', 'royal'];
 
+const GAME_TYPES: GameVariant[] = ['pool', 'points', 'deals'];
+const GAME_TYPE_LABELS = ['Pool', 'Points', 'Deals'];
+
+const POOL_LIMITS: PoolType[] = [101, 201, 250];
+const POOL_LIMIT_LABELS = ['101', '201', '250'];
+
 const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
   const { colors, themeName, setTheme } = useTheme();
+  const { defaults, updateDefaults } = useSettings();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const slideAnim = useRef(new Animated.Value(MODAL_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -72,6 +83,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
   const handleThemeSelect = (theme: ThemeName) => {
     setTheme(theme);
   };
+
+  const gameTypeIndex = GAME_TYPES.indexOf(defaults.gameType);
+  const poolLimitIndex = POOL_LIMITS.indexOf(defaults.poolLimit as 101 | 201 | 250);
 
   return (
     <Modal visible={visible} transparent animationType="none">
@@ -144,17 +158,148 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
               </View>
             </View>
 
-            {/* Future Sections Placeholder */}
+            {/* Game Defaults Section */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Icon name="slider.horizontal.3" size={IconSize.medium} color={colors.accent} weight="medium" />
                 <Text style={styles.sectionTitle}>Game Defaults</Text>
               </View>
-              <View style={styles.comingSoon}>
-                <Text style={styles.comingSoonText}>Coming soon</Text>
+
+              <View style={styles.defaultsCard}>
+                {/* Default Game Type */}
+                <View style={styles.settingRow}>
+                  <Text style={styles.settingLabel}>Game Type</Text>
+                  <SegmentedControl
+                    values={GAME_TYPE_LABELS}
+                    selectedIndex={gameTypeIndex >= 0 ? gameTypeIndex : 0}
+                    onChange={(event) => {
+                      const index = event.nativeEvent.selectedSegmentIndex;
+                      updateDefaults({ gameType: GAME_TYPES[index] });
+                    }}
+                    style={styles.compactSegmentedControl}
+                    fontStyle={styles.segmentedFont}
+                    activeFontStyle={styles.segmentedActiveFont}
+                    tintColor={colors.tint}
+                    backgroundColor={colors.background}
+                  />
+                </View>
+
+                {/* Default Pool Limit - only show for Pool game type */}
+                {defaults.gameType === 'pool' && (
+                  <>
+                    <View style={styles.settingDivider} />
+
+                    <View style={styles.settingRow}>
+                      <Text style={styles.settingLabel}>Pool Limit</Text>
+                      <SegmentedControl
+                        values={POOL_LIMIT_LABELS}
+                        selectedIndex={poolLimitIndex >= 0 ? poolLimitIndex : 2}
+                        onChange={(event) => {
+                          const index = event.nativeEvent.selectedSegmentIndex;
+                          updateDefaults({ poolLimit: POOL_LIMITS[index] });
+                        }}
+                        style={styles.compactSegmentedControl}
+                        fontStyle={styles.segmentedFont}
+                        activeFontStyle={styles.segmentedActiveFont}
+                        tintColor={colors.tint}
+                        backgroundColor={colors.background}
+                      />
+                    </View>
+                  </>
+                )}
+
+                {/* Default Number of Deals - only show for Deals game type */}
+                {defaults.gameType === 'deals' && (
+                  <>
+                    <View style={styles.settingDivider} />
+
+                    <View style={styles.settingRow}>
+                      <Text style={styles.settingLabel}>Number of Deals</Text>
+                      <View style={styles.stepperContainer}>
+                        <TouchableOpacity
+                          style={styles.stepperButton}
+                          onPress={() => {
+                            if (defaults.numberOfDeals > 1) {
+                              updateDefaults({ numberOfDeals: defaults.numberOfDeals - 1 });
+                            }
+                          }}
+                          accessibilityLabel="Decrease number of deals"
+                          accessibilityRole="button"
+                        >
+                          <Icon name="minus" size={IconSize.small} color={defaults.numberOfDeals <= 1 ? colors.tertiaryLabel : colors.tint} weight="bold" />
+                        </TouchableOpacity>
+                        <Text style={styles.stepperValue}>{defaults.numberOfDeals}</Text>
+                        <TouchableOpacity
+                          style={styles.stepperButton}
+                          onPress={() => {
+                            if (defaults.numberOfDeals < 10) {
+                              updateDefaults({ numberOfDeals: defaults.numberOfDeals + 1 });
+                            }
+                          }}
+                          accessibilityLabel="Increase number of deals"
+                          accessibilityRole="button"
+                        >
+                          <Icon name="plus" size={IconSize.small} color={defaults.numberOfDeals >= 10 ? colors.tertiaryLabel : colors.tint} weight="bold" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </>
+                )}
+
+                <View style={styles.settingDivider} />
+
+                {/* Default Player Count */}
+                <View style={styles.settingRow}>
+                  <Text style={styles.settingLabel}>Starting Players</Text>
+                  <View style={styles.stepperContainer}>
+                    <TouchableOpacity
+                      style={styles.stepperButton}
+                      onPress={() => {
+                        if (defaults.playerCount > 2) {
+                          updateDefaults({ playerCount: defaults.playerCount - 1 });
+                        }
+                      }}
+                      accessibilityLabel="Decrease player count"
+                      accessibilityRole="button"
+                    >
+                      <Icon name="minus" size={IconSize.small} color={defaults.playerCount <= 2 ? colors.tertiaryLabel : colors.tint} weight="bold" />
+                    </TouchableOpacity>
+                    <Text style={styles.stepperValue}>{defaults.playerCount}</Text>
+                    <TouchableOpacity
+                      style={styles.stepperButton}
+                      onPress={() => {
+                        if (defaults.playerCount < 11) {
+                          updateDefaults({ playerCount: defaults.playerCount + 1 });
+                        }
+                      }}
+                      accessibilityLabel="Increase player count"
+                      accessibilityRole="button"
+                    >
+                      <Icon name="plus" size={IconSize.small} color={defaults.playerCount >= 11 ? colors.tertiaryLabel : colors.tint} weight="bold" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.settingDivider} />
+
+                {/* Remember Last Game Toggle */}
+                <View style={styles.settingRowToggle}>
+                  <View style={styles.toggleLabelContainer}>
+                    <Text style={styles.settingLabel}>Remember Last Game</Text>
+                    <Text style={styles.settingHint}>Auto-fill from previous game</Text>
+                  </View>
+                  <Switch
+                    value={defaults.rememberLastGame}
+                    onValueChange={(value) => updateDefaults({ rememberLastGame: value })}
+                    trackColor={{ false: colors.separator, true: colors.tint }}
+                    thumbColor="#FFFFFF"
+                    ios_backgroundColor={colors.separator}
+                  />
+                </View>
               </View>
             </View>
 
+            {/* About Section */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Icon name="info.circle.fill" size={IconSize.medium} color={colors.accent} weight="medium" />
@@ -276,17 +421,79 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     textAlign: 'center',
     marginTop: Spacing.md,
   },
-  comingSoon: {
+
+  // Game Defaults Styles
+  defaultsCard: {
     backgroundColor: colors.cardBackground,
-    padding: Spacing.lg,
     borderRadius: BorderRadius.medium,
+    padding: Spacing.md,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: TapTargets.minimum,
+  },
+  settingRowToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: TapTargets.minimum,
+  },
+  settingDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.separator,
+    marginVertical: Spacing.sm,
+  },
+  settingLabel: {
+    ...Typography.subheadline,
+    color: colors.label,
+  },
+  settingHint: {
+    ...Typography.caption1,
+    color: colors.secondaryLabel,
+    marginTop: 2,
+  },
+  toggleLabelContainer: {
+    flex: 1,
+    marginRight: Spacing.md,
+  },
+  compactSegmentedControl: {
+    width: 160,
+    height: 32,
+  },
+  segmentedFont: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.label,
+  },
+  segmentedActiveFont: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.label,
+  },
+  stepperContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: BorderRadius.small,
+    overflow: 'hidden',
+  },
+  stepperButton: {
+    width: 36,
+    height: 32,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  comingSoonText: {
+  stepperValue: {
     ...Typography.subheadline,
-    color: colors.tertiaryLabel,
-    fontStyle: 'italic',
+    fontWeight: '600',
+    color: colors.label,
+    minWidth: 32,
+    textAlign: 'center',
   },
+
+  // About Styles
   aboutRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
