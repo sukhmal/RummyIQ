@@ -25,6 +25,7 @@ const HistoryScreen = ({ navigation, route }: any) => {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [editingRound, setEditingRound] = useState<Round | null>(null);
   const [editingRoundNumber, setEditingRoundNumber] = useState<number>(0);
+  const [sortByScore, setSortByScore] = useState(false);
 
   // Track touch position for swipe detection
   const touchStartX = useRef(0);
@@ -72,6 +73,9 @@ const HistoryScreen = ({ navigation, route }: any) => {
     if (!a.isEliminated && b.isEliminated) return -1;
     return a.score - b.score;
   });
+
+  // Use sorted or original player order based on toggle
+  const leaderboardPlayers = sortByScore ? sortedPlayers : displayGame.players;
 
   // Calculate cumulative scores for the chart
   const getChartData = () => {
@@ -206,7 +210,21 @@ const HistoryScreen = ({ navigation, route }: any) => {
 
         {/* Leaderboard */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>LEADERBOARD</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionLabel}>LEADERBOARD</Text>
+            <TouchableOpacity
+              style={styles.sortToggle}
+              onPress={() => setSortByScore(!sortByScore)}
+              accessibilityLabel={sortByScore ? 'Show original order' : 'Sort by score'}
+              accessibilityRole="button">
+              <Icon
+                name={sortByScore ? 'arrow.up.arrow.down.circle.fill' : 'arrow.up.arrow.down.circle'}
+                size={IconSize.medium}
+                color={sortByScore ? colors.tint : colors.tertiaryLabel}
+                weight="medium"
+              />
+            </TouchableOpacity>
+          </View>
           <View style={styles.card}>
             {/* Table Header */}
             <View style={styles.tableHeader}>
@@ -217,8 +235,8 @@ const HistoryScreen = ({ navigation, route }: any) => {
             </View>
 
             {/* Player Rows */}
-            {sortedPlayers.map((player, index) => {
-              const isLast = index === sortedPlayers.length - 1;
+            {leaderboardPlayers.map((player, index) => {
+              const isLast = index === leaderboardPlayers.length - 1;
               const isWinner = player.id === displayGame.winner;
               return (
                 <View
@@ -229,15 +247,15 @@ const HistoryScreen = ({ navigation, route }: any) => {
                     player.isEliminated && styles.eliminatedRow,
                   ]}>
                   <View style={[styles.rankColumn, styles.rankContainer]}>
-                    {index === 0 && !player.isEliminated ? (
+                    {sortByScore && index === 0 && !player.isEliminated ? (
                       <View style={styles.rankBadgeGold}>
                         <Text style={styles.rankBadgeText}>1</Text>
                       </View>
-                    ) : index === 1 && !player.isEliminated ? (
+                    ) : sortByScore && index === 1 && !player.isEliminated ? (
                       <View style={styles.rankBadgeSilver}>
                         <Text style={styles.rankBadgeText}>{index + 1}</Text>
                       </View>
-                    ) : index === 2 && !player.isEliminated ? (
+                    ) : sortByScore && index === 2 && !player.isEliminated ? (
                       <View style={styles.rankBadgeBronze}>
                         <Text style={styles.rankBadgeText}>{index + 1}</Text>
                       </View>
@@ -475,6 +493,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontWeight: '600',
     color: colors.secondaryLabel,
     letterSpacing: 0.5,
+  },
+  sortToggle: {
+    padding: Spacing.xs,
+    marginRight: Spacing.xs,
   },
 
   // Chart Card
