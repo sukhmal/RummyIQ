@@ -252,22 +252,46 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
 
                     <View style={styles.settingDivider} />
 
-                    {/* Drop Penalty */}
+                    {/* First Drop Penalty */}
                     <View style={styles.settingRow}>
                       <View style={styles.toggleLabelContainer}>
-                        <Text style={styles.settingLabel}>Drop Penalty</Text>
-                        <Text style={styles.settingHint}>Points for dropping</Text>
+                        <Text style={styles.settingLabel}>First Drop</Text>
+                        <Text style={styles.settingHint}>Before picking a card</Text>
                       </View>
                       <View style={styles.inputWithSuffix}>
                         <TextInput
                           style={styles.numberInput}
-                          value={defaults.dropPenalty.toString()}
+                          value={defaults.firstDropPenalty.toString()}
                           onChangeText={(text) => {
                             const value = parseInt(text, 10) || 0;
-                            updateDefaults({ dropPenalty: value });
+                            updateDefaults({ firstDropPenalty: value });
                           }}
                           keyboardType="numeric"
                           placeholder="25"
+                          placeholderTextColor={colors.placeholder}
+                        />
+                        <Text style={styles.inputSuffix}>pts</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.settingDivider} />
+
+                    {/* Middle Drop Penalty */}
+                    <View style={styles.settingRow}>
+                      <View style={styles.toggleLabelContainer}>
+                        <Text style={styles.settingLabel}>Middle Drop</Text>
+                        <Text style={styles.settingHint}>After picking a card</Text>
+                      </View>
+                      <View style={styles.inputWithSuffix}>
+                        <TextInput
+                          style={styles.numberInput}
+                          value={defaults.middleDropPenalty.toString()}
+                          onChangeText={(text) => {
+                            const value = parseInt(text, 10) || 0;
+                            updateDefaults({ middleDropPenalty: value });
+                          }}
+                          keyboardType="numeric"
+                          placeholder="50"
                           placeholderTextColor={colors.placeholder}
                         />
                         <Text style={styles.inputSuffix}>pts</Text>

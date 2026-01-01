@@ -8,7 +8,8 @@ export interface GameDefaults {
   numberOfDeals: number;
   playerCount: number;
   rememberLastGame: boolean;
-  dropPenalty: number;
+  firstDropPenalty: number;
+  middleDropPenalty: number;
   joinTableAmount: number;
   currency: CurrencyCode;
 }
@@ -19,7 +20,8 @@ export interface LastGameSettings {
   numberOfDeals: number;
   playerCount: number;
   playerNames: string[];
-  dropPenalty?: number;
+  firstDropPenalty?: number;
+  middleDropPenalty?: number;
   joinTableAmount?: number;
 }
 
@@ -37,7 +39,8 @@ const DEFAULT_SETTINGS: GameDefaults = {
   numberOfDeals: 2,
   playerCount: 2,
   rememberLastGame: false,
-  dropPenalty: 25,
+  firstDropPenalty: 25,
+  middleDropPenalty: 50,
   joinTableAmount: 0,
   currency: 'USD',
 };
@@ -106,7 +109,8 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         playerCount: lastGameSettings.playerCount,
         playerNames: lastGameSettings.playerNames,
         rememberLastGame: defaults.rememberLastGame,
-        dropPenalty: lastGameSettings.dropPenalty ?? defaults.dropPenalty,
+        firstDropPenalty: lastGameSettings.firstDropPenalty ?? defaults.firstDropPenalty,
+        middleDropPenalty: lastGameSettings.middleDropPenalty ?? defaults.middleDropPenalty,
         joinTableAmount: lastGameSettings.joinTableAmount ?? defaults.joinTableAmount,
         currency: defaults.currency,
       };

@@ -41,7 +41,8 @@ export interface GameConfig {
   poolLimit?: PoolType;
   pointValue?: number;
   numberOfDeals?: number;
-  dropPenalty?: number;
+  firstDropPenalty?: number;
+  middleDropPenalty?: number;
   joinTableAmount?: number;
 }
 

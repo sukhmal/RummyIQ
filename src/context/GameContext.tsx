@@ -356,10 +356,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const player = currentGame.players.find(p => p.id === playerId);
     if (!player || player.isEliminated) return false;
 
-    const dropPenalty = currentGame.config.dropPenalty || 25;
+    const firstDropPenalty = currentGame.config.firstDropPenalty || 25;
     const spaceLeft = currentGame.config.poolLimit - player.score;
 
-    return spaceLeft < dropPenalty;
+    return spaceLeft < firstDropPenalty;
   }, [currentGame]);
 
   // Check if eliminated players can rejoin
