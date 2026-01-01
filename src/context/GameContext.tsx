@@ -41,25 +41,62 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     saveGame(newGame);
   };
 
-  // Get the next dealer (rotates to previous player in order, skipping eliminated)
-  const getNextDealer = (game: Game): string | undefined => {
+  // Get the next dealer based on open card rule:
+  // - Open card goes to next ACTIVE player after dealer (in seating order)
+  // - Only the player who received open card can become next dealer
+  // - If that player is eliminated this round → dealer stays same
+  // - If dealer is also eliminated → go backwards to previous dealer
+  const getNextDealer = (
+    game: Game,
+    previousPlayers: Player[],
+  ): string | undefined => {
     if (!game.dealerId) return undefined;
 
     const activePlayers = game.players.filter(p => !p.isEliminated);
     if (activePlayers.length === 0) return undefined;
 
-    const currentDealerIndex = activePlayers.findIndex(p => p.id === game.dealerId);
-    if (currentDealerIndex === -1) {
-      // Current dealer was eliminated, pick the last active player
-      return activePlayers[activePlayers.length - 1].id;
+    const allPlayers = game.players;
+    const currentDealerIndex = allPlayers.findIndex(p => p.id === game.dealerId);
+    if (currentDealerIndex === -1) return activePlayers[0].id;
+
+    const currentDealer = allPlayers[currentDealerIndex];
+
+    // Find who received the open card this round:
+    // The next ACTIVE player after dealer in seating order (before eliminations)
+    let openCardReceiverIndex = -1;
+    for (let i = 1; i <= allPlayers.length; i++) {
+      const idx = (currentDealerIndex + i) % allPlayers.length;
+      const player = allPlayers[idx];
+      // Check if this player was active at the START of the round
+      const wasActive = previousPlayers.find(p => p.id === player.id && !p.isEliminated);
+      if (wasActive) {
+        openCardReceiverIndex = idx;
+        break;
+      }
     }
 
-    // Rotate to previous player (go backwards in the list)
-    const nextIndex = currentDealerIndex === 0
-      ? activePlayers.length - 1
-      : currentDealerIndex - 1;
+    if (openCardReceiverIndex === -1) return game.dealerId;
 
-    return activePlayers[nextIndex].id;
+    const openCardReceiver = allPlayers[openCardReceiverIndex];
+
+    // If current dealer is eliminated, go BACKWARDS to find previous dealer
+    if (currentDealer.isEliminated) {
+      for (let i = 1; i <= allPlayers.length; i++) {
+        const idx = (currentDealerIndex - i + allPlayers.length) % allPlayers.length;
+        if (!allPlayers[idx].isEliminated) {
+          return allPlayers[idx].id;
+        }
+      }
+      return activePlayers[0].id;
+    }
+
+    // If the open card receiver is now eliminated, dealer stays the same
+    if (openCardReceiver.isEliminated) {
+      return game.dealerId;
+    }
+
+    // Open card receiver is still active, they become next dealer
+    return openCardReceiver.id;
   };
 
   const setDealer = useCallback((playerId: string) => {
@@ -151,7 +188,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     };
 
     // Rotate dealer for next round (unless game is over)
-    const nextDealerId = gameWinner ? currentGame.dealerId : getNextDealer(intermediateGame);
+    // Pass previous players state to check who just got eliminated
+    const nextDealerId = gameWinner
+      ? currentGame.dealerId
+      : getNextDealer(intermediateGame, currentGame.players);
 
     const updatedGame: Game = {
       ...intermediateGame,

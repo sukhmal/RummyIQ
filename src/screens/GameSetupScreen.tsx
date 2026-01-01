@@ -48,6 +48,7 @@ const GameSetupScreen = ({ navigation }: any) => {
     { id: '2', name: '', score: 0 },
   ]);
   const [selectedDealerId, setSelectedDealerId] = useState<string | null>(null); // null = last player
+  const [showDealerSelection, setShowDealerSelection] = useState<boolean>(false);
   const [initialized, setInitialized] = useState(false);
 
   // Apply defaults on mount
@@ -466,35 +467,58 @@ const GameSetupScreen = ({ navigation }: any) => {
         {/* Dealer Selection */}
         {validPlayerCount >= 2 && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>DEALER</Text>
             <View style={styles.card}>
-              {players.filter(p => p.name.trim() !== '').map((player, index, filteredPlayers) => {
-                const isLast = index === filteredPlayers.length - 1;
-                const isSelected = selectedDealerId === player.id ||
-                  (selectedDealerId === null && index === filteredPlayers.length - 1);
-                return (
-                  <TouchableOpacity
-                    key={player.id}
-                    style={[
-                      styles.dealerRow,
-                      !isLast && styles.playerRowBorder,
-                    ]}
-                    onPress={() => setSelectedDealerId(player.id)}
-                    accessibilityLabel={`Select ${player.name} as dealer`}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: isSelected }}>
-                    <View style={styles.dealerInfo}>
-                      <Text style={styles.dealerName}>{player.name}</Text>
-                      {selectedDealerId === null && index === filteredPlayers.length - 1 && (
-                        <Text style={styles.dealerDefault}>(Default)</Text>
-                      )}
-                    </View>
-                    {isSelected && (
-                      <Icon name="checkmark.circle.fill" size={IconSize.large} color={colors.tint} weight="medium" />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleLabelContainer}>
+                  <Text style={styles.toggleLabel}>Select Dealer</Text>
+                  <Text style={styles.toggleHint}>
+                    {showDealerSelection
+                      ? 'Choose who deals first'
+                      : `Default: ${players.filter(p => p.name.trim() !== '').slice(-1)[0]?.name || 'Last player'}`}
+                  </Text>
+                </View>
+                <Switch
+                  value={showDealerSelection}
+                  onValueChange={(value) => {
+                    setShowDealerSelection(value);
+                    if (!value) {
+                      setSelectedDealerId(null); // Reset to default when hiding
+                    }
+                  }}
+                  trackColor={{ false: colors.separator, true: colors.tint }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={colors.separator}
+                />
+              </View>
+              {showDealerSelection && (
+                <>
+                  <View style={styles.dealerSeparator} />
+                  {players.filter(p => p.name.trim() !== '').map((player, index, filteredPlayers) => {
+                    const isLast = index === filteredPlayers.length - 1;
+                    const isSelected = selectedDealerId === player.id ||
+                      (selectedDealerId === null && index === filteredPlayers.length - 1);
+                    return (
+                      <TouchableOpacity
+                        key={player.id}
+                        style={[
+                          styles.dealerRow,
+                          !isLast && styles.playerRowBorder,
+                        ]}
+                        onPress={() => setSelectedDealerId(player.id)}
+                        accessibilityLabel={`Select ${player.name} as dealer`}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: isSelected }}>
+                        <View style={styles.dealerInfo}>
+                          <Text style={styles.dealerName}>{player.name}</Text>
+                        </View>
+                        {isSelected && (
+                          <Icon name="checkmark.circle.fill" size={IconSize.large} color={colors.tint} weight="medium" />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </>
+              )}
             </View>
           </View>
         )}
@@ -772,6 +796,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
 
   // Dealer Selection
+  dealerSeparator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.separator,
+  },
   dealerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -788,10 +816,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   dealerName: {
     ...Typography.body,
     color: colors.label,
-  },
-  dealerDefault: {
-    ...Typography.footnote,
-    color: colors.secondaryLabel,
   },
 
   // Start Button

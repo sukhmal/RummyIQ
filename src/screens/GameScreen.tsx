@@ -350,11 +350,6 @@ const GameScreen = ({ navigation }: any) => {
                     {/* Player Name */}
                     <View style={styles.nameColumn}>
                       <View style={styles.nameWithDealer}>
-                        {isDealer && (
-                          <View style={styles.dealerBadge}>
-                            <Text style={styles.dealerBadgeText}>D</Text>
-                          </View>
-                        )}
                         <Text
                           style={[
                             styles.playerName,
@@ -364,6 +359,11 @@ const GameScreen = ({ navigation }: any) => {
                           numberOfLines={1}>
                           {player.name}
                         </Text>
+                        {isDealer && (
+                          <View style={styles.dealerBadge}>
+                            <Text style={styles.dealerBadgeText}>D</Text>
+                          </View>
+                        )}
                       </View>
                     </View>
 
@@ -701,7 +701,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     ...Typography.body,
     fontWeight: '500',
     color: colors.label,
-    flex: 1,
+    flexShrink: 1,
   },
   playerNameWinner: {
     color: colors.success,
