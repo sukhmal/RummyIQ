@@ -1,10 +1,10 @@
-# Rummy Scorer - App Store Metadata
+# RummyIQ - App Store Metadata
 
 ## App Name
-Rummy Scorer
+RummyIQ
 
 ## Subtitle (30 characters max)
-Track Indian Rummy Scores
+Where Skill Wins
 
 ## Category
 Primary: Games
@@ -14,7 +14,7 @@ Secondary: Card
 rummy,card game,score tracker,indian rummy,pool rummy,deals rummy,points rummy,card scorer,game
 
 ## Description
-Rummy Scorer is the ultimate companion for Indian Rummy players. Track scores effortlessly across all popular game variants including Pool Rummy (101, 201, 250), Deals Rummy, and Points Rummy.
+RummyIQ is the ultimate companion for Indian Rummy players. Track scores effortlessly across all popular game variants including Pool Rummy (101, 201, 250), Deals Rummy, and Points Rummy.
 
 **Key Features:**
 
@@ -32,7 +32,7 @@ Rummy Scorer is the ultimate companion for Indian Rummy players. Track scores ef
 - Tournament scoring
 - Keeping accurate records
 
-No more pen and paper! Let Rummy Scorer handle the math while you focus on the game.
+No more pen and paper! Let RummyIQ handle the math while you focus on the game.
 
 ## Promotional Text (170 characters max)
 Track your Indian Rummy games with ease! Support for Pool, Deals & Points Rummy with beautiful score charts and unlimited game history.
@@ -65,7 +65,7 @@ Free (or your preferred price)
 - 5.5" (iPhone 8 Plus): 1242 x 2208 pixels (optional)
 
 Recommended screenshots:
-1. Home screen with "Rummy Scorer" title
+1. Home screen with "RummyIQ" title and "Where Skill Wins" tagline
 2. Game setup screen showing variant selection
 3. Score entry screen during a game
 4. Scoreboard with chart showing score progression

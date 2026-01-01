@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RummyScorer is a React Native mobile app for tracking scores in Indian Rummy games. It supports three game variants: Pool Rummy (101/201/250 point elimination), Points Rummy, and Deals Rummy.
+RummyIQ is a React Native mobile app for tracking scores in Indian Rummy games. It supports three game variants: Pool Rummy (101/201/250 point elimination), Points Rummy, and Deals Rummy.
 
 ## Build Commands
 

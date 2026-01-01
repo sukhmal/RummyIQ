@@ -1,4 +1,4 @@
-package com.rummyscorer
+package com.rummyiq
 
 import android.app.Application
 import com.facebook.react.PackageList

@@ -1,4 +1,6 @@
-# Rummy Scorer
+# RummyIQ
+
+*Where Skill Wins*
 
 A mobile scoring app for Indian Rummy that supports all major variants: Pool Rummy, Points Rummy, and Deals Rummy.
 

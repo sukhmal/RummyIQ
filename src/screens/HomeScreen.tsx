@@ -70,8 +70,8 @@ const HomeScreen = ({ navigation }: any) => {
           <View style={styles.logoContainer}>
             <Icon name="suit.spade.fill" size={48} color={colors.accent} weight="medium" />
           </View>
-          <Text style={styles.title}>Rummy Scorer</Text>
-          <Text style={styles.subtitle}>Track scores like a pro</Text>
+          <Text style={styles.title}>RummyIQ</Text>
+          <Text style={styles.subtitle}>Where Skill Wins</Text>
         </View>
 
         {/* Action Cards */}
