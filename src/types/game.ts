@@ -52,6 +52,7 @@ export interface Game {
   players: Player[];
   rounds: Round[];
   currentDeal: number;
+  dealerId?: string;
   startedAt: Date;
   completedAt?: Date;
   winner?: string;

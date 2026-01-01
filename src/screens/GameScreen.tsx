@@ -333,6 +333,7 @@ const GameScreen = ({ navigation }: any) => {
                 const isLast = index === activePlayers.length - 1;
                 const isWinner = state === 1;
                 const isInvalid = state === 3;
+                const isDealer = currentGame.dealerId === player.id;
 
                 return (
                   <TouchableOpacity
@@ -344,19 +345,26 @@ const GameScreen = ({ navigation }: any) => {
                       isInvalid && styles.playerRowInvalid,
                     ]}
                     onPress={() => cyclePlayerState(player.id)}
-                    accessibilityLabel={`${player.name}, ${getStateLabel(state)}, total ${player.score}`}
+                    accessibilityLabel={`${player.name}${isDealer ? ', dealer' : ''}, ${getStateLabel(state)}, total ${player.score}`}
                     accessibilityRole="button">
                     {/* Player Name */}
                     <View style={styles.nameColumn}>
-                      <Text
-                        style={[
-                          styles.playerName,
-                          isWinner && styles.playerNameWinner,
-                          isInvalid && styles.playerNameInvalid,
-                        ]}
-                        numberOfLines={1}>
-                        {player.name}
-                      </Text>
+                      <View style={styles.nameWithDealer}>
+                        {isDealer && (
+                          <View style={styles.dealerBadge}>
+                            <Text style={styles.dealerBadgeText}>D</Text>
+                          </View>
+                        )}
+                        <Text
+                          style={[
+                            styles.playerName,
+                            isWinner && styles.playerNameWinner,
+                            isInvalid && styles.playerNameInvalid,
+                          ]}
+                          numberOfLines={1}>
+                          {player.name}
+                        </Text>
+                      </View>
                     </View>
 
                     {/* Status Badge */}
@@ -684,10 +692,16 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
 
   // Player Name
+  nameWithDealer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
   playerName: {
     ...Typography.body,
     fontWeight: '500',
     color: colors.label,
+    flex: 1,
   },
   playerNameWinner: {
     color: colors.success,
@@ -696,6 +710,19 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   playerNameInvalid: {
     color: colors.destructive,
     fontWeight: '600',
+  },
+  dealerBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.tint,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dealerBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.label,
   },
 
   // Status Badge

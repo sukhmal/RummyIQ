@@ -5,7 +5,7 @@ import { Game, GameConfig, Player, Round, ScoreInput } from '../types/game';
 interface GameContextType {
   currentGame: Game | null;
   gameHistory: Game[];
-  createGame: (config: GameConfig, players: Player[], name?: string) => void;
+  createGame: (config: GameConfig, players: Player[], name?: string, dealerId?: string) => void;
   addRound: (scores: ScoreInput[]) => void;
   updateRound: (roundId: string, scores: ScoreInput[]) => void;
   resetGame: () => void;
@@ -15,6 +15,7 @@ interface GameContextType {
   isPlayerInCompulsoryPlay: (playerId: string) => boolean;
   canPlayersRejoin: () => boolean;
   rejoinPlayer: (playerId: string) => void;
+  setDealer: (playerId: string) => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -23,7 +24,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [currentGame, setCurrentGame] = useState<Game | null>(null);
   const [gameHistory, setGameHistory] = useState<Game[]>([]);
 
-  const createGame = (config: GameConfig, players: Player[], name?: string) => {
+  const createGame = (config: GameConfig, players: Player[], name?: string, dealerId?: string) => {
+    // Dealer defaults to last player in the order
+    const initialDealerId = dealerId || players[players.length - 1]?.id;
     const newGame: Game = {
       id: Date.now().toString(),
       name: name || undefined,
@@ -31,11 +34,48 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       players: players.map(p => ({ ...p, score: 0 })),
       rounds: [],
       currentDeal: 1,
+      dealerId: initialDealerId,
       startedAt: new Date(),
     };
     setCurrentGame(newGame);
     saveGame(newGame);
   };
+
+  // Get the next dealer (rotates to previous player in order, skipping eliminated)
+  const getNextDealer = (game: Game): string | undefined => {
+    if (!game.dealerId) return undefined;
+
+    const activePlayers = game.players.filter(p => !p.isEliminated);
+    if (activePlayers.length === 0) return undefined;
+
+    const currentDealerIndex = activePlayers.findIndex(p => p.id === game.dealerId);
+    if (currentDealerIndex === -1) {
+      // Current dealer was eliminated, pick the last active player
+      return activePlayers[activePlayers.length - 1].id;
+    }
+
+    // Rotate to previous player (go backwards in the list)
+    const nextIndex = currentDealerIndex === 0
+      ? activePlayers.length - 1
+      : currentDealerIndex - 1;
+
+    return activePlayers[nextIndex].id;
+  };
+
+  const setDealer = useCallback((playerId: string) => {
+    if (!currentGame) return;
+
+    const player = currentGame.players.find(p => p.id === playerId);
+    if (!player || player.isEliminated) return;
+
+    const updatedGame: Game = {
+      ...currentGame,
+      dealerId: playerId,
+    };
+
+    setCurrentGame(updatedGame);
+    saveGame(updatedGame);
+  }, [currentGame]);
 
   const calculateScore = (input: ScoreInput, config: GameConfig): number => {
     if (input.hasInvalidDeclaration) {
@@ -100,13 +140,22 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       gameWinner = updatedPlayers.find(p => p.score === lowestScore)?.id;
     }
 
-    const updatedGame: Game = {
+    // Create intermediate game state to calculate next dealer
+    const intermediateGame: Game = {
       ...currentGame,
       players: updatedPlayers,
       rounds: [...currentGame.rounds, newRound],
       currentDeal: currentGame.currentDeal + 1,
       winner: gameWinner,
       completedAt: gameWinner ? new Date() : undefined,
+    };
+
+    // Rotate dealer for next round (unless game is over)
+    const nextDealerId = gameWinner ? currentGame.dealerId : getNextDealer(intermediateGame);
+
+    const updatedGame: Game = {
+      ...intermediateGame,
+      dealerId: nextDealerId,
     };
 
     setCurrentGame(updatedGame);
@@ -341,6 +390,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         isPlayerInCompulsoryPlay,
         canPlayersRejoin,
         rejoinPlayer,
+        setDealer,
       }}>
       {children}
     </GameContext.Provider>
