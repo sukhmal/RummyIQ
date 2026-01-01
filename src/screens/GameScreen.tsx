@@ -288,6 +288,23 @@ const GameScreen = ({ navigation }: any) => {
             </View>
           </View>
 
+          {/* Rejoin Opportunity Banner */}
+          {rejoinEnabled && eliminatedPlayers.length > 0 && (
+            <View style={styles.rejoinBanner}>
+              <View style={styles.rejoinBannerIcon}>
+                <Icon name="person.badge.plus" size={IconSize.large} color={colors.success} weight="medium" />
+              </View>
+              <View style={styles.rejoinBannerContent}>
+                <Text style={styles.rejoinBannerTitle}>Rejoin Available!</Text>
+                <Text style={styles.rejoinBannerText}>
+                  {eliminatedPlayers.length === 1
+                    ? `${eliminatedPlayers[0].name} can rejoin the game`
+                    : `${eliminatedPlayers.length} players can rejoin the game`}
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* Instructions */}
           <View style={styles.instructionCard}>
             <Icon name="hand.tap.fill" size={IconSize.medium} color={colors.secondaryLabel} weight="medium" />
@@ -542,6 +559,39 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     ...Typography.subheadline,
     fontWeight: '600',
     color: colors.accent,
+  },
+
+  // Rejoin Banner
+  rejoinBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.success + '15',
+    borderWidth: 1,
+    borderColor: colors.success + '40',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.medium,
+    marginBottom: Spacing.md,
+    gap: Spacing.md,
+  },
+  rejoinBannerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.success + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rejoinBannerContent: {
+    flex: 1,
+  },
+  rejoinBannerTitle: {
+    ...Typography.headline,
+    color: colors.success,
+    marginBottom: 2,
+  },
+  rejoinBannerText: {
+    ...Typography.footnote,
+    color: colors.success,
   },
 
   // Instruction Card
