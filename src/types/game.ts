@@ -2,11 +2,31 @@ export type GameVariant = 'pool' | 'points' | 'deals';
 
 export type PoolType = number;
 
+export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'INR' | 'JPY' | 'AUD' | 'CAD' | 'CNY';
+
+export interface Currency {
+  code: CurrencyCode;
+  symbol: string;
+  name: string;
+}
+
+export const CURRENCIES: Currency[] = [
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British Pound' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+  { code: 'CNY', symbol: '¥', name: 'Chinese Yuan' },
+];
+
 export interface Player {
   id: string;
   name: string;
   score: number;
   isEliminated?: boolean;
+  rejoinCount?: number;
 }
 
 export interface Round {
@@ -21,6 +41,8 @@ export interface GameConfig {
   poolLimit?: PoolType;
   pointValue?: number;
   numberOfDeals?: number;
+  dropPenalty?: number;
+  joinTableAmount?: number;
 }
 
 export interface Game {

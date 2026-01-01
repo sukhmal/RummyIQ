@@ -10,6 +10,7 @@ import {
   Dimensions,
   ScrollView,
   Switch,
+  TextInput,
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
@@ -17,7 +18,8 @@ import Icon from './Icon';
 import { useTheme } from '../context/ThemeContext';
 import { useSettings } from '../context/SettingsContext';
 import { ThemeColors, ThemeName, themeNames, themes, Typography, Spacing, IconSize, BorderRadius, TapTargets } from '../theme';
-import { GameVariant, PoolType } from '../types/game';
+import { GameVariant, PoolType, CURRENCIES } from '../types/game';
+import { getCurrencySymbol } from '../context/SettingsContext';
 
 const { height: screenHeight } = Dimensions.get('window');
 const MODAL_HEIGHT = screenHeight * 0.85;
@@ -158,6 +160,48 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
               </View>
             </View>
 
+            {/* Currency Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Icon name="dollarsign.circle.fill" size={IconSize.medium} color={colors.accent} weight="medium" />
+                <Text style={styles.sectionTitle}>Currency</Text>
+              </View>
+
+              <View style={styles.currencyCard}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.currencyList}
+                >
+                  {CURRENCIES.map((currency) => {
+                    const isSelected = defaults.currency === currency.code;
+                    return (
+                      <TouchableOpacity
+                        key={currency.code}
+                        style={[
+                          styles.currencyItem,
+                          isSelected && [styles.currencyItemSelected, { borderColor: colors.tint }],
+                        ]}
+                        onPress={() => updateDefaults({ currency: currency.code })}
+                        accessibilityLabel={`Select ${currency.name}`}
+                        accessibilityRole="button"
+                      >
+                        <Text style={[styles.currencySymbol, isSelected && { color: colors.tint }]}>
+                          {currency.symbol}
+                        </Text>
+                        <Text style={[styles.currencyCode, isSelected && { color: colors.tint }]}>
+                          {currency.code}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+                <Text style={styles.selectedCurrencyName}>
+                  {CURRENCIES.find(c => c.code === defaults.currency)?.name || 'US Dollar'}
+                </Text>
+              </View>
+            </View>
+
             {/* Game Defaults Section */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -204,6 +248,54 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
                         tintColor={colors.tint}
                         backgroundColor={colors.background}
                       />
+                    </View>
+
+                    <View style={styles.settingDivider} />
+
+                    {/* Drop Penalty */}
+                    <View style={styles.settingRow}>
+                      <View style={styles.toggleLabelContainer}>
+                        <Text style={styles.settingLabel}>Drop Penalty</Text>
+                        <Text style={styles.settingHint}>Points for dropping</Text>
+                      </View>
+                      <View style={styles.inputWithSuffix}>
+                        <TextInput
+                          style={styles.numberInput}
+                          value={defaults.dropPenalty.toString()}
+                          onChangeText={(text) => {
+                            const value = parseInt(text, 10) || 0;
+                            updateDefaults({ dropPenalty: value });
+                          }}
+                          keyboardType="numeric"
+                          placeholder="25"
+                          placeholderTextColor={colors.placeholder}
+                        />
+                        <Text style={styles.inputSuffix}>pts</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.settingDivider} />
+
+                    {/* Join Table Amount */}
+                    <View style={styles.settingRow}>
+                      <View style={styles.toggleLabelContainer}>
+                        <Text style={styles.settingLabel}>Join Table Amount</Text>
+                        <Text style={styles.settingHint}>Buy-in per player</Text>
+                      </View>
+                      <View style={styles.inputWithSuffix}>
+                        <TextInput
+                          style={styles.numberInput}
+                          value={defaults.joinTableAmount.toString()}
+                          onChangeText={(text) => {
+                            const value = parseInt(text, 10) || 0;
+                            updateDefaults({ joinTableAmount: value });
+                          }}
+                          keyboardType="numeric"
+                          placeholder="0"
+                          placeholderTextColor={colors.placeholder}
+                        />
+                        <Text style={styles.inputSuffix}>{getCurrencySymbol(defaults.currency)}</Text>
+                      </View>
                     </View>
                   </>
                 )}
@@ -422,6 +514,48 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     marginTop: Spacing.md,
   },
 
+  // Currency Styles
+  currencyCard: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: BorderRadius.medium,
+    padding: Spacing.md,
+  },
+  currencyList: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  currencyItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.small,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: colors.background,
+    minWidth: 60,
+  },
+  currencyItemSelected: {
+    borderWidth: 2,
+  },
+  currencySymbol: {
+    ...Typography.title2,
+    fontWeight: '600',
+    color: colors.label,
+  },
+  currencyCode: {
+    ...Typography.caption1,
+    color: colors.secondaryLabel,
+    marginTop: 2,
+  },
+  selectedCurrencyName: {
+    ...Typography.subheadline,
+    fontWeight: '600',
+    color: colors.label,
+    textAlign: 'center',
+    marginTop: Spacing.md,
+  },
+
   // Game Defaults Styles
   defaultsCard: {
     backgroundColor: colors.cardBackground,
@@ -491,6 +625,27 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.label,
     minWidth: 32,
     textAlign: 'center',
+  },
+  inputWithSuffix: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: BorderRadius.small,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  numberInput: {
+    ...Typography.subheadline,
+    fontWeight: '600',
+    color: colors.label,
+    minWidth: 40,
+    textAlign: 'center',
+    padding: 0,
+  },
+  inputSuffix: {
+    ...Typography.subheadline,
+    color: colors.secondaryLabel,
   },
 
   // About Styles

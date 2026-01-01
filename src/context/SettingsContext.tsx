@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GameVariant, PoolType } from '../types/game';
+import { GameVariant, PoolType, CurrencyCode, CURRENCIES } from '../types/game';
 
 export interface GameDefaults {
   gameType: GameVariant;
@@ -8,6 +8,9 @@ export interface GameDefaults {
   numberOfDeals: number;
   playerCount: number;
   rememberLastGame: boolean;
+  dropPenalty: number;
+  joinTableAmount: number;
+  currency: CurrencyCode;
 }
 
 export interface LastGameSettings {
@@ -16,6 +19,8 @@ export interface LastGameSettings {
   numberOfDeals: number;
   playerCount: number;
   playerNames: string[];
+  dropPenalty?: number;
+  joinTableAmount?: number;
 }
 
 interface SettingsContextType {
@@ -32,6 +37,13 @@ const DEFAULT_SETTINGS: GameDefaults = {
   numberOfDeals: 2,
   playerCount: 2,
   rememberLastGame: false,
+  dropPenalty: 25,
+  joinTableAmount: 0,
+  currency: 'USD',
+};
+
+export const getCurrencySymbol = (code: CurrencyCode): string => {
+  return CURRENCIES.find(c => c.code === code)?.symbol || '$';
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -94,6 +106,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         playerCount: lastGameSettings.playerCount,
         playerNames: lastGameSettings.playerNames,
         rememberLastGame: defaults.rememberLastGame,
+        dropPenalty: lastGameSettings.dropPenalty ?? defaults.dropPenalty,
+        joinTableAmount: lastGameSettings.joinTableAmount ?? defaults.joinTableAmount,
+        currency: defaults.currency,
       };
     }
     return { ...defaults };

@@ -12,6 +12,9 @@ interface GameContextType {
   loadGame: () => Promise<void>;
   deleteGameFromHistory: (gameId: string) => void;
   clearHistory: () => void;
+  isPlayerInCompulsoryPlay: (playerId: string) => boolean;
+  canPlayersRejoin: () => boolean;
+  rejoinPlayer: (playerId: string) => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -254,6 +257,75 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Check if a player is in compulsory play state
+  // A player is in compulsory play when (poolLimit - currentScore) < dropPenalty
+  const isPlayerInCompulsoryPlay = useCallback((playerId: string): boolean => {
+    if (!currentGame) return false;
+    if (currentGame.config.variant !== 'pool') return false;
+    if (!currentGame.config.poolLimit) return false;
+
+    const player = currentGame.players.find(p => p.id === playerId);
+    if (!player || player.isEliminated) return false;
+
+    const dropPenalty = currentGame.config.dropPenalty || 25;
+    const spaceLeft = currentGame.config.poolLimit - player.score;
+
+    return spaceLeft < dropPenalty;
+  }, [currentGame]);
+
+  // Check if eliminated players can rejoin
+  // Players can rejoin only when no active player is in compulsory play
+  const canPlayersRejoin = useCallback((): boolean => {
+    if (!currentGame) return false;
+    if (currentGame.config.variant !== 'pool') return false;
+    if (currentGame.winner) return false; // Game is already over
+
+    // Check if there are any eliminated players
+    const eliminatedPlayers = currentGame.players.filter(p => p.isEliminated);
+    if (eliminatedPlayers.length === 0) return false;
+
+    // Check if any active player is in compulsory play
+    const activePlayers = currentGame.players.filter(p => !p.isEliminated);
+    const anyInCompulsoryPlay = activePlayers.some(p => isPlayerInCompulsoryPlay(p.id));
+
+    return !anyInCompulsoryPlay;
+  }, [currentGame, isPlayerInCompulsoryPlay]);
+
+  // Rejoin an eliminated player
+  // Player joins at highest active player's score + 1
+  const rejoinPlayer = useCallback((playerId: string) => {
+    if (!currentGame) return;
+    if (!canPlayersRejoin()) return;
+
+    const player = currentGame.players.find(p => p.id === playerId);
+    if (!player || !player.isEliminated) return;
+
+    // Calculate the new score: highest active player's score + 1
+    const activePlayers = currentGame.players.filter(p => !p.isEliminated);
+    const highestScore = Math.max(...activePlayers.map(p => p.score));
+    const rejoinScore = highestScore + 1;
+
+    const updatedPlayers = currentGame.players.map(p => {
+      if (p.id === playerId) {
+        return {
+          ...p,
+          score: rejoinScore,
+          isEliminated: false,
+          rejoinCount: (p.rejoinCount || 0) + 1,
+        };
+      }
+      return p;
+    });
+
+    const updatedGame: Game = {
+      ...currentGame,
+      players: updatedPlayers,
+    };
+
+    setCurrentGame(updatedGame);
+    saveGame(updatedGame);
+  }, [currentGame, canPlayersRejoin]);
+
   return (
     <GameContext.Provider
       value={{
@@ -266,6 +338,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         loadGame,
         deleteGameFromHistory,
         clearHistory,
+        isPlayerInCompulsoryPlay,
+        canPlayersRejoin,
+        rejoinPlayer,
       }}>
       {children}
     </GameContext.Provider>

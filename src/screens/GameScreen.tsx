@@ -25,7 +25,7 @@ import { ThemeColors, Typography, Spacing, TapTargets, IconSize, BorderRadius } 
 type PlayerState = 0 | 1 | 2 | 3;
 
 const GameScreen = ({ navigation }: any) => {
-  const { currentGame, addRound } = useGame();
+  const { currentGame, addRound, canPlayersRejoin, rejoinPlayer } = useGame();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [playerStates, setPlayerStates] = useState<{ [playerId: string]: PlayerState }>({});
@@ -235,6 +235,8 @@ const GameScreen = ({ navigation }: any) => {
   };
 
   const activePlayers = currentGame.players.filter(p => !p.isEliminated);
+  const eliminatedPlayers = currentGame.players.filter(p => p.isEliminated);
+  const rejoinEnabled = canPlayersRejoin();
 
   const getGameTypeLabel = () => {
     if (currentGame.config.variant === 'pool') {
@@ -395,6 +397,64 @@ const GameScreen = ({ navigation }: any) => {
               })}
             </View>
           </View>
+
+          {/* Eliminated Players Section */}
+          {eliminatedPlayers.length > 0 && currentGame.config.variant === 'pool' && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>ELIMINATED PLAYERS</Text>
+              <View style={styles.card}>
+                {eliminatedPlayers.map((player, index) => {
+                  const isLast = index === eliminatedPlayers.length - 1;
+                  return (
+                    <View
+                      key={player.id}
+                      style={[
+                        styles.eliminatedRow,
+                        !isLast && styles.playerRowBorder,
+                      ]}>
+                      <View style={styles.eliminatedInfo}>
+                        <Text style={styles.eliminatedName}>{player.name}</Text>
+                        <Text style={styles.eliminatedScore}>Score: {player.score}</Text>
+                        {player.rejoinCount && player.rejoinCount > 0 && (
+                          <Text style={styles.rejoinCount}>Rejoined: {player.rejoinCount}x</Text>
+                        )}
+                      </View>
+                      <TouchableOpacity
+                        style={[
+                          styles.rejoinButton,
+                          !rejoinEnabled && styles.rejoinButtonDisabled,
+                        ]}
+                        onPress={() => rejoinPlayer(player.id)}
+                        disabled={!rejoinEnabled}
+                        accessibilityLabel={`Rejoin ${player.name}`}
+                        accessibilityRole="button">
+                        <Icon
+                          name="person.badge.plus"
+                          size={IconSize.small}
+                          color={rejoinEnabled ? colors.tint : colors.tertiaryLabel}
+                          weight="medium"
+                        />
+                        <Text style={[
+                          styles.rejoinButtonText,
+                          !rejoinEnabled && styles.rejoinButtonTextDisabled,
+                        ]}>
+                          Rejoin
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+                {!rejoinEnabled && eliminatedPlayers.length > 0 && (
+                  <View style={styles.rejoinHint}>
+                    <Icon name="exclamationmark.triangle.fill" size={IconSize.small} color={colors.warning} weight="medium" />
+                    <Text style={styles.rejoinHintText}>
+                      Cannot rejoin while a player is in compulsory play
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
 
           {/* Action Buttons */}
           <View style={styles.actionSection}>
@@ -641,6 +701,66 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
+  },
+
+  // Eliminated Players Section
+  eliminatedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    minHeight: TapTargets.comfortable,
+  },
+  eliminatedInfo: {
+    flex: 1,
+  },
+  eliminatedName: {
+    ...Typography.body,
+    fontWeight: '500',
+    color: colors.tertiaryLabel,
+  },
+  eliminatedScore: {
+    ...Typography.footnote,
+    color: colors.tertiaryLabel,
+  },
+  rejoinCount: {
+    ...Typography.caption1,
+    color: colors.tertiaryLabel,
+    fontStyle: 'italic',
+  },
+  rejoinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.tint + '20',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.medium,
+    gap: Spacing.xs,
+  },
+  rejoinButtonDisabled: {
+    backgroundColor: colors.separator,
+  },
+  rejoinButtonText: {
+    ...Typography.footnote,
+    fontWeight: '600',
+    color: colors.tint,
+  },
+  rejoinButtonTextDisabled: {
+    color: colors.tertiaryLabel,
+  },
+  rejoinHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    gap: Spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.separator,
+  },
+  rejoinHintText: {
+    ...Typography.caption1,
+    color: colors.warning,
+    flex: 1,
   },
 
   // Action Section

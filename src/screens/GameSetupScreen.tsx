@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
-import { useSettings } from '../context/SettingsContext';
+import { useSettings, getCurrencySymbol } from '../context/SettingsContext';
 import { GameVariant, GameConfig, Player, PoolType } from '../types/game';
 import Icon from '../components/Icon';
 import { ThemeColors, Typography, Spacing, TapTargets, IconSize, BorderRadius } from '../theme';
@@ -41,6 +41,8 @@ const GameSetupScreen = ({ navigation }: any) => {
   const [customPoolLimitText, setCustomPoolLimitText] = useState('');
   const [pointValue, setPointValue] = useState<number>(1);
   const [numberOfDeals, setNumberOfDeals] = useState<number>(2);
+  const [dropPenalty, setDropPenalty] = useState<number>(25);
+  const [joinTableAmount, setJoinTableAmount] = useState<number>(0);
   const [players, setPlayers] = useState<Player[]>([
     { id: '1', name: '', score: 0 },
     { id: '2', name: '', score: 0 },
@@ -71,6 +73,10 @@ const GameSetupScreen = ({ navigation }: any) => {
 
     // Set number of deals
     setNumberOfDeals(effectiveDefaults.numberOfDeals);
+
+    // Set drop penalty and join table amount
+    setDropPenalty(effectiveDefaults.dropPenalty);
+    setJoinTableAmount(effectiveDefaults.joinTableAmount);
 
     // Set player count and names
     const playerCount = effectiveDefaults.playerCount;
@@ -108,6 +114,14 @@ const GameSetupScreen = ({ navigation }: any) => {
     return useDefaults ? defaults.numberOfDeals : numberOfDeals;
   };
 
+  const getEffectiveDropPenalty = (): number => {
+    return useDefaults ? defaults.dropPenalty : dropPenalty;
+  };
+
+  const getEffectiveJoinTableAmount = (): number => {
+    return useDefaults ? defaults.joinTableAmount : joinTableAmount;
+  };
+
   const variant = GAME_TYPES[variantIndex].id;
   const isCustomPoolLimit = poolLimitIndex === 3;
 
@@ -141,10 +155,16 @@ const GameSetupScreen = ({ navigation }: any) => {
     const effectiveVariant = getEffectiveVariant();
     const effectivePoolLimit = getEffectivePoolLimit();
     const effectiveDeals = getEffectiveNumberOfDeals();
+    const effectiveDropPenalty = getEffectiveDropPenalty();
+    const effectiveJoinTableAmount = getEffectiveJoinTableAmount();
 
     const config: GameConfig = {
       variant: effectiveVariant,
-      ...(effectiveVariant === 'pool' && { poolLimit: effectivePoolLimit }),
+      ...(effectiveVariant === 'pool' && {
+        poolLimit: effectivePoolLimit,
+        dropPenalty: effectiveDropPenalty,
+        joinTableAmount: effectiveJoinTableAmount,
+      }),
       ...(effectiveVariant === 'points' && { pointValue }),
       ...(effectiveVariant === 'deals' && { numberOfDeals: effectiveDeals }),
     };
@@ -156,6 +176,8 @@ const GameSetupScreen = ({ navigation }: any) => {
       numberOfDeals: effectiveDeals,
       playerCount: validPlayers.length,
       playerNames: validPlayers.map(p => p.name),
+      dropPenalty: effectiveDropPenalty,
+      joinTableAmount: effectiveJoinTableAmount,
     });
 
     resetGame();
@@ -168,7 +190,7 @@ const GameSetupScreen = ({ navigation }: any) => {
   const getVariantDescription = (v: GameVariant) => {
     switch (v) {
       case 'pool':
-        return 'Players are eliminated when they exceed the pool limit. Last player standing wins.';
+        return 'Players are eliminated when they exceed the pool limit. Eliminated players can rejoin when no one is in compulsory play. Last player standing wins.';
       case 'points':
         return 'Single round game. Winner gets 0 points, losers pay based on their hand value.';
       case 'deals':
@@ -299,13 +321,56 @@ const GameSetupScreen = ({ navigation }: any) => {
           </View>
         )}
 
+        {/* Pool Settings Row - Drop Penalty and Join Table Amount side by side */}
+        {!useDefaults && variant === 'pool' && (
+          <View style={styles.section}>
+            <View style={styles.sideBySideRow}>
+              {/* Drop Penalty */}
+              <View style={styles.sideBySideItem}>
+                <Text style={styles.sectionLabel}>DROP PENALTY</Text>
+                <View style={styles.card}>
+                  <View style={styles.compactInputRow}>
+                    <TextInput
+                      style={styles.compactInput}
+                      value={dropPenalty.toString()}
+                      onChangeText={text => setDropPenalty(parseInt(text, 10) || 25)}
+                      keyboardType="numeric"
+                      placeholder="25"
+                      placeholderTextColor={colors.placeholder}
+                    />
+                    <Text style={styles.inputSuffix}>pts</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Join Table Amount */}
+              <View style={styles.sideBySideItem}>
+                <Text style={styles.sectionLabel}>JOIN TABLE</Text>
+                <View style={styles.card}>
+                  <View style={styles.compactInputRow}>
+                    <TextInput
+                      style={styles.compactInput}
+                      value={joinTableAmount.toString()}
+                      onChangeText={text => setJoinTableAmount(parseInt(text, 10) || 0)}
+                      keyboardType="numeric"
+                      placeholder="0"
+                      placeholderTextColor={colors.placeholder}
+                    />
+                    <Text style={styles.inputSuffix}>{getCurrencySymbol(defaults.currency)}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Points Value Section - Only show when not using defaults */}
         {!useDefaults && variant === 'points' && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>POINT VALUE</Text>
             <View style={styles.card}>
               <View style={styles.inputRow}>
-                <Icon name="banknote.fill" size={IconSize.medium} color={colors.secondaryLabel} weight="medium" />
+                <Text style={styles.currencyIcon}>{getCurrencySymbol(defaults.currency)}</Text>
                 <TextInput
                   style={styles.input}
                   value={pointValue.toString()}
@@ -563,6 +628,46 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   inputSuffix: {
     ...Typography.footnote,
     color: colors.secondaryLabel,
+  },
+  currencyIcon: {
+    ...Typography.body,
+    fontWeight: '600',
+    color: colors.secondaryLabel,
+    minWidth: IconSize.medium,
+    textAlign: 'center',
+  },
+
+  // Hint Row
+  hintRow: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.md,
+  },
+  hintText: {
+    ...Typography.caption1,
+    color: colors.tertiaryLabel,
+  },
+
+  // Side by Side Layout
+  sideBySideRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  sideBySideItem: {
+    flex: 1,
+  },
+  compactInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  compactInput: {
+    ...Typography.body,
+    color: colors.label,
+    textAlign: 'center',
+    minWidth: 50,
+    padding: 0,
   },
 
   // Player Styles

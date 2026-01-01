@@ -11,6 +11,9 @@ A mobile scoring app for Indian Rummy that supports all major variants: Pool Rum
 - **Player Management**: Add 2-11 players per game
 - **Score Tracking**: Easy round-by-round score entry with winner selection
 - **Invalid Declaration Handling**: Automatic 80-point penalty
+- **Player Rejoin**: Eliminated players can rejoin in Pool games when no active player is in compulsory play
+- **Buy-in Tracking**: Configure join table amount and drop penalty for Pool games
+- **Multi-Currency Support**: Choose from 8 global currencies (USD, EUR, GBP, INR, JPY, AUD, CAD, CNY)
 - **Game History**: View complete scoreboard, score progression charts, and round-by-round breakdown
 - **Auto-Save**: Game state persists between sessions
 - **Multiple Themes**: Choose from 5 beautiful themes:
