@@ -39,7 +39,7 @@ const DIFFICULTY_OPTIONS: { value: BotDifficulty; label: string; icon: string }[
 const PracticeSetupScreen = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<any>();
-  const { createGame, startRound } = usePracticeGame();
+  const { createGame } = usePracticeGame();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Form state
@@ -59,9 +59,8 @@ const PracticeSetupScreen = () => {
     };
 
     await createGame(playerName.trim() || 'You', botCount, difficulty, config);
-    await startRound();
     navigation.replace('PracticeGame');
-  }, [playerName, botCount, difficulty, variant, numberOfDeals, createGame, startRound, navigation]);
+  }, [playerName, botCount, difficulty, variant, numberOfDeals, createGame, navigation]);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>

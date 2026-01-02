@@ -181,22 +181,39 @@ export const PracticeGameProvider: React.FC<PracticeGameProviderProps> = ({ chil
       scores[id] = 0;
     });
 
+    // Create deck and deal cards for first round
+    const deck = createDecks(playerIds.length);
+    const dealResult = dealCards(deck, playerIds, CARDS_PER_PLAYER);
+
+    // First round setup
+    const firstRound: RoundState = {
+      roundNumber: 1,
+      phase: 'playing',
+      turnPhase: 'draw',
+      currentPlayerIndex: 1, // First player after dealer (human is dealer first)
+      dealerIndex: 0,
+      hands: dealResult.hands,
+      drawPile: dealResult.drawPile,
+      discardPile: dealResult.discardPile,
+      wildJokerCard: dealResult.wildJokerCard,
+    };
+
     const newGame: PracticeGameState = {
       id: `practice-${Date.now()}`,
       config,
       players,
       activePlayers: playerIds,
-      currentRound: null,
+      currentRound: firstRound,
       roundResults: [],
       scores,
-      gamePhase: 'setup',
+      gamePhase: 'playing',
       winner: null,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
 
+    discardHistoryRef.current = [...dealResult.discardPile];
     setGameState(newGame);
-    discardHistoryRef.current = [];
   }, []);
 
   /**
