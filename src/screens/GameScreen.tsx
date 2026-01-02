@@ -15,9 +15,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
-import { ScoreInput } from '../types/game';
+import { ScoreInput, SplitPotShare } from '../types/game';
 import FireworksModal from '../components/FireworksModal';
 import ConfirmationDialog from '../components/ConfirmationDialog';
+import SplitPotModal from '../components/SplitPotModal';
 import Icon from '../components/Icon';
 import { ThemeColors, Typography, Spacing, TapTargets, IconSize, BorderRadius } from '../theme';
 
@@ -25,7 +26,7 @@ import { ThemeColors, Typography, Spacing, TapTargets, IconSize, BorderRadius } 
 type PlayerState = 0 | 1 | 2 | 3;
 
 const GameScreen = ({ navigation }: any) => {
-  const { currentGame, addRound, canPlayersRejoin, rejoinPlayer } = useGame();
+  const { currentGame, addRound, canPlayersRejoin, rejoinPlayer, canSplitPot, splitPot, getTotalPot } = useGame();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [playerStates, setPlayerStates] = useState<{ [playerId: string]: PlayerState }>({});
@@ -36,6 +37,7 @@ const GameScreen = ({ navigation }: any) => {
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [pendingScores, setPendingScores] = useState<ScoreInput[] | null>(null);
+  const [showSplitPot, setShowSplitPot] = useState(false);
   const inputRefs = useRef<{ [playerId: string]: TextInput | null }>({});
 
   // Track touch position for swipe detection
@@ -234,6 +236,12 @@ const GameScreen = ({ navigation }: any) => {
     navigation.navigate('History');
   };
 
+  const handleSplitPotConfirm = (shares: SplitPotShare[]) => {
+    splitPot(shares);
+    setShowSplitPot(false);
+    navigation.navigate('History');
+  };
+
   const activePlayers = currentGame.players.filter(p => !p.isEliminated);
   const eliminatedPlayers = currentGame.players.filter(p => p.isEliminated);
   const rejoinEnabled = canPlayersRejoin();
@@ -317,7 +325,29 @@ const GameScreen = ({ navigation }: any) => {
 
           {/* Score Table */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>PLAYERS</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>PLAYERS</Text>
+              <View style={styles.sectionActions}>
+                <TouchableOpacity
+                  style={styles.sectionButton}
+                  onPress={() => navigation.navigate('History')}
+                  accessibilityLabel="View scores"
+                  accessibilityRole="button">
+                  <Icon name="chart.bar.fill" size={IconSize.small} color={colors.gold} weight="medium" />
+                  <Text style={styles.sectionButtonText}>Scores</Text>
+                </TouchableOpacity>
+                {canSplitPot() && (
+                  <TouchableOpacity
+                    style={styles.sectionButton}
+                    onPress={() => setShowSplitPot(true)}
+                    accessibilityLabel="Split pot"
+                    accessibilityRole="button">
+                    <Icon name="chart.pie.fill" size={IconSize.small} color={colors.gold} weight="medium" />
+                    <Text style={styles.sectionButtonText}>Split</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
             <View style={styles.card}>
               {/* Table Header */}
               <View style={styles.tableHeader}>
@@ -525,6 +555,15 @@ const GameScreen = ({ navigation }: any) => {
           onConfirm={() => setShowError(false)}
           onCancel={() => setShowError(false)}
         />
+
+        <SplitPotModal
+          visible={showSplitPot}
+          totalPot={getTotalPot()}
+          poolLimit={currentGame.config.poolLimit || 250}
+          activePlayers={activePlayers}
+          onConfirm={handleSplitPotConfirm}
+          onCancel={() => setShowSplitPot(false)}
+        />
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );
@@ -622,13 +661,36 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   section: {
     marginBottom: Spacing.lg,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+    marginLeft: Spacing.xs,
+  },
   sectionLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: colors.secondaryLabel,
     letterSpacing: 0.5,
-    marginBottom: Spacing.sm,
-    marginLeft: Spacing.xs,
+  },
+  sectionActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  sectionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.gold + '20',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.large,
+    gap: Spacing.xs,
+  },
+  sectionButtonText: {
+    ...Typography.footnote,
+    fontWeight: '600',
+    color: colors.gold,
   },
 
   // Card Styles

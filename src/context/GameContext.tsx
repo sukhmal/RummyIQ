@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Game, GameConfig, Player, Round, ScoreInput } from '../types/game';
+import { Game, GameConfig, Player, Round, ScoreInput, SplitPotShare, SplitPotInfo } from '../types/game';
 
 interface GameContextType {
   currentGame: Game | null;
@@ -16,6 +16,9 @@ interface GameContextType {
   canPlayersRejoin: () => boolean;
   rejoinPlayer: (playerId: string) => void;
   setDealer: (playerId: string) => void;
+  splitPot: (shares: SplitPotShare[]) => void;
+  canSplitPot: () => boolean;
+  getTotalPot: () => number;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -437,6 +440,53 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     saveGame(updatedGame);
   }, [currentGame, canPlayersRejoin]);
 
+  // Calculate total pot for split
+  // Total = joinTableAmount × (initial players + sum of all rejoins)
+  const getTotalPot = useCallback((): number => {
+    if (!currentGame) return 0;
+    if (currentGame.config.variant !== 'pool') return 0;
+
+    const joinTableAmount = currentGame.config.joinTableAmount || 0;
+    const initialPlayers = currentGame.players.length;
+    const totalRejoins = currentGame.players.reduce((sum, p) => sum + (p.rejoinCount || 0), 0);
+
+    return joinTableAmount * (initialPlayers + totalRejoins);
+  }, [currentGame]);
+
+  // Check if pot can be split
+  // Only during active pool game with 2+ remaining players
+  const canSplitPot = useCallback((): boolean => {
+    if (!currentGame) return false;
+    if (currentGame.config.variant !== 'pool') return false;
+    if (currentGame.winner) return false; // Game already has a winner
+
+    const activePlayers = currentGame.players.filter(p => !p.isEliminated);
+    return activePlayers.length >= 2;
+  }, [currentGame]);
+
+  // Split the pot and end the game
+  const splitPot = useCallback((shares: SplitPotShare[]) => {
+    if (!currentGame) return;
+    if (!canSplitPot()) return;
+
+    const totalPot = getTotalPot();
+
+    const splitPotInfo: SplitPotInfo = {
+      totalPot,
+      shares,
+    };
+
+    // End the game with split pot (no single winner)
+    const updatedGame: Game = {
+      ...currentGame,
+      splitPot: splitPotInfo,
+      completedAt: new Date(),
+    };
+
+    setCurrentGame(updatedGame);
+    saveGame(updatedGame);
+  }, [currentGame, canSplitPot, getTotalPot]);
+
   return (
     <GameContext.Provider
       value={{
@@ -453,6 +503,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         canPlayersRejoin,
         rejoinPlayer,
         setDealer,
+        splitPot,
+        canSplitPot,
+        getTotalPot,
       }}>
       {children}
     </GameContext.Provider>

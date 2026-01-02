@@ -106,6 +106,18 @@ const RULES_DATA: RuleSection[] = [
       'Players can rejoin multiple times (if eligible).',
     ],
   },
+  {
+    id: 'splitpot',
+    title: 'Split Pot',
+    icon: 'chart.pie.fill',
+    content: [
+      'Available in Pool Rummy when 2 or more players remain.',
+      'Total pot = Join amount × (initial players + total rejoins).',
+      'Proportional split based on drops available (pool limit - score).',
+      'Equal split divides the pot evenly among remaining players.',
+      'Custom option lets players enter any amounts they agree on.',
+    ],
+  },
 ];
 
 const RulesScreen = () => {

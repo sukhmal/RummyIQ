@@ -32,22 +32,6 @@ const HomeButton = () => {
   );
 };
 
-const ScoresButton = () => {
-  const navigation = useNavigation<any>();
-  const { colors } = useTheme();
-  return (
-    <TouchableOpacity
-      onPress={() => navigation.navigate('History')}
-      style={[styles.headerBadge, { backgroundColor: colors.gold + '20' }]}
-      accessibilityLabel="View scoreboard"
-      accessibilityRole="button"
-    >
-      <Icon name="chart.bar.fill" size={IconSize.small} color={colors.gold} weight="medium" />
-      <Text style={[styles.headerBadgeText, { color: colors.gold }]}>Scores</Text>
-    </TouchableOpacity>
-  );
-};
-
 const PlayButton = () => {
   const navigation = useNavigation<any>();
   const { colors } = useTheme();
@@ -133,7 +117,6 @@ const AppNavigator = () => {
           options={{
             title: 'Game',
             headerLeft: HomeButton,
-            headerRight: ScoresButton,
           }}
         />
         <Stack.Screen

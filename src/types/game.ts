@@ -46,6 +46,16 @@ export interface GameConfig {
   joinTableAmount?: number;
 }
 
+export interface SplitPotShare {
+  playerId: string;
+  amount: number;
+}
+
+export interface SplitPotInfo {
+  totalPot: number;
+  shares: SplitPotShare[];
+}
+
 export interface Game {
   id: string;
   name?: string;
@@ -57,6 +67,7 @@ export interface Game {
   startedAt: Date;
   completedAt?: Date;
   winner?: string;
+  splitPot?: SplitPotInfo;
 }
 
 export interface ScoreInput {
