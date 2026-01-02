@@ -13,6 +13,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import GameSetupScreen from './src/screens/GameSetupScreen';
 import GameScreen from './src/screens/GameScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
+import RulesScreen from './src/screens/RulesScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -142,6 +143,14 @@ const AppNavigator = () => {
             title: 'Scoreboard',
             headerLeft: HomeButton,
             headerRight: PlayButton,
+          }}
+        />
+        <Stack.Screen
+          name="Rules"
+          component={RulesScreen}
+          options={{
+            title: 'Rules',
+            headerLeft: HomeButton,
           }}
         />
       </Stack.Navigator>

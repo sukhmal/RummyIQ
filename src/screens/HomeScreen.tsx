@@ -109,6 +109,21 @@ const HomeScreen = ({ navigation }: any) => {
             </View>
             <Icon name="chevron.right" size={IconSize.medium} color={colors.tertiaryLabel} weight="semibold" />
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('Rules')}
+            accessibilityLabel="View game rules"
+            accessibilityRole="button">
+            <View style={[styles.actionIconContainer, { backgroundColor: colors.accent + '20' }]}>
+              <Icon name="book.fill" size={IconSize.large} color={colors.accent} weight="medium" />
+            </View>
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Rules & Help</Text>
+              <Text style={styles.actionSubtitle}>Learn how to play</Text>
+            </View>
+            <Icon name="chevron.right" size={IconSize.medium} color={colors.tertiaryLabel} weight="semibold" />
+          </TouchableOpacity>
         </View>
 
         {/* Past Games Section */}
