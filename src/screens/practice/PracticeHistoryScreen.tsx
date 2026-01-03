@@ -20,6 +20,7 @@ import { usePracticeGame } from '../../context/PracticeGameContext';
 import { ThemeColors, Typography, Spacing, BorderRadius, IconSize } from '../../theme';
 import Icon from '../../components/Icon';
 import { Card } from '../../components/practice';
+import { GameInfoBadges } from '../../components/shared';
 import { autoArrangeHand } from '../../engine/declaration';
 import { Meld, Card as CardType } from '../../engine/types';
 
@@ -246,20 +247,13 @@ const PracticeHistoryScreen = () => {
         {/* Game Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Game Info</Text>
-          <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Variant</Text>
-              <Text style={styles.infoValue}>{gameState.config.variant.toUpperCase()}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Rounds Played</Text>
-              <Text style={styles.infoValue}>{gameState.roundResults.length}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Players</Text>
-              <Text style={styles.infoValue}>{gameState.players.length}</Text>
-            </View>
-          </View>
+          <GameInfoBadges
+            variant={gameState.config.variant}
+            poolLimit={gameState.config.poolLimit}
+            numberOfDeals={gameState.config.numberOfDeals}
+            roundCount={gameState.roundResults.length}
+            playerCount={gameState.players.length}
+          />
         </View>
       </ScrollView>
 
@@ -461,28 +455,6 @@ const createStyles = (colors: ThemeColors) =>
     },
     zeroScore: {
       color: colors.success,
-    },
-    infoCard: {
-      backgroundColor: colors.cardBackground,
-      borderRadius: BorderRadius.medium,
-      padding: Spacing.md,
-      borderWidth: 1,
-      borderColor: colors.separator,
-    },
-    infoRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: Spacing.xs,
-    },
-    infoLabel: {
-      ...Typography.body,
-      color: colors.secondaryLabel,
-    },
-    infoValue: {
-      ...Typography.body,
-      color: colors.label,
-      fontWeight: '600',
     },
     footer: {
       flexDirection: 'row',

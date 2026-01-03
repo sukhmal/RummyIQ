@@ -14,6 +14,7 @@ import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
 import Icon from '../components/Icon';
 import EditRoundModal from '../components/EditRoundModal';
+import { WinnerBanner, GameInfoBadges } from '../components/shared';
 import { ThemeColors, Typography, Spacing, TapTargets, IconSize, BorderRadius } from '../theme';
 import { Round } from '../types/game';
 
@@ -105,15 +106,6 @@ const HistoryScreen = ({ navigation, route }: any) => {
 
   const chartData = getChartData();
 
-  const getGameTypeLabel = () => {
-    if (displayGame.config.variant === 'pool') {
-      return `Pool ${displayGame.config.poolLimit}`;
-    } else if (displayGame.config.variant === 'deals') {
-      return `${displayGame.config.numberOfDeals} Deals`;
-    }
-    return 'Points';
-  };
-
   return (
     <SafeAreaView
       style={styles.container}
@@ -126,41 +118,17 @@ const HistoryScreen = ({ navigation, route }: any) => {
 
         {/* Winner Banner */}
         {winner && (
-          <View style={styles.winnerBanner}>
-            <View style={styles.winnerIconContainer}>
-              <Icon name="trophy.fill" size={36} color={colors.gold} weight="medium" />
-            </View>
-            <View style={styles.winnerContent}>
-              <Text style={styles.winnerLabel}>Winner</Text>
-              <Text style={styles.winnerName}>{winner.name}</Text>
-            </View>
-          </View>
+          <WinnerBanner winnerName={winner.name} />
         )}
 
         {/* Game Info Badges */}
-        <View style={styles.gameInfoSection}>
-          <View style={styles.gameInfoRow}>
-            {displayGame.name && (
-              <View style={styles.infoBadge}>
-                <Icon name="tag.fill" size={IconSize.small} color={colors.accent} weight="medium" />
-                <Text style={styles.infoBadgeText}>{displayGame.name}</Text>
-              </View>
-            )}
-            <View style={styles.infoBadge}>
-              <Icon
-                name={displayGame.config.variant === 'pool' ? 'person.3.fill' : displayGame.config.variant === 'deals' ? 'square.stack.fill' : 'star.fill'}
-                size={IconSize.small}
-                color={colors.accent}
-                weight="medium"
-              />
-              <Text style={styles.infoBadgeText}>{getGameTypeLabel()}</Text>
-            </View>
-            <View style={styles.infoBadge}>
-              <Icon name="arrow.trianglehead.2.clockwise.rotate.90" size={IconSize.small} color={colors.accent} weight="medium" />
-              <Text style={styles.infoBadgeText}>{displayGame.rounds.length} rounds</Text>
-            </View>
-          </View>
-        </View>
+        <GameInfoBadges
+          gameName={displayGame.name}
+          variant={displayGame.config.variant}
+          poolLimit={displayGame.config.poolLimit}
+          numberOfDeals={displayGame.config.numberOfDeals}
+          roundCount={displayGame.rounds.length}
+        />
 
         {/* Score Progression Chart */}
         {chartData && (
@@ -414,67 +382,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: {
     padding: Spacing.lg,
     paddingBottom: Spacing.xxl,
-  },
-
-  // Winner Banner
-  winnerBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gold + '15',
-    borderWidth: 2,
-    borderColor: colors.gold,
-    borderRadius: BorderRadius.large,
-    padding: Spacing.lg,
-    marginBottom: Spacing.lg,
-    gap: Spacing.md,
-  },
-  winnerIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.gold + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  winnerContent: {
-    flex: 1,
-  },
-  winnerLabel: {
-    ...Typography.caption1,
-    color: colors.gold,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 2,
-  },
-  winnerName: {
-    ...Typography.title1,
-    color: colors.label,
-  },
-
-  // Game Info Badges
-  gameInfoSection: {
-    marginBottom: Spacing.lg,
-  },
-  gameInfoRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-  },
-  infoBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.accent + '20',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.large,
-    gap: Spacing.sm,
-  },
-  infoBadgeText: {
-    ...Typography.subheadline,
-    fontWeight: '600',
-    color: colors.accent,
   },
 
   // Section Styles

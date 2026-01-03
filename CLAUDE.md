@@ -94,6 +94,8 @@ Reusable components used by both Scorer and Practice modes:
 - `VariantSelector`: Game type selection (pool/points/deals) - supports segmented and radio styles
 - `PoolLimitSelector`: Pool limit configuration with 101/201/250 presets and optional custom input
 - `NumberSelector`: Segmented number picker for bot count, number of deals, etc.
+- `WinnerBanner`: Trophy banner showing game winner
+- `GameInfoBadges`: Row of badges showing game variant, rounds, players
 
 **Indian Rummy Rules Implemented**:
 - 13 cards per player, 14th card drawn then discarded each turn
