@@ -158,7 +158,7 @@ const FireworksModal = ({
   }, [visible, titleOpacity, titleScale]);
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal visible={visible} transparent animationType="fade" supportedOrientations={['portrait', 'landscape']}>
       <View style={styles.container}>
         {/* Fireworks */}
         {fireworks.map(firework => (

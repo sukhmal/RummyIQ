@@ -1,11 +1,13 @@
 import React from 'react';
 import { StatusBar, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GameProvider, useGame } from './src/context/GameContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { SettingsProvider } from './src/context/SettingsContext';
+import { PracticeGameProvider } from './src/context/PracticeGameContext';
 import Icon from './src/components/Icon';
 import { TapTargets, IconSize, Spacing, BorderRadius, Typography } from './src/theme';
 
@@ -14,6 +16,11 @@ import GameSetupScreen from './src/screens/GameSetupScreen';
 import GameScreen from './src/screens/GameScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import RulesScreen from './src/screens/RulesScreen';
+import {
+  PracticeSetupScreen,
+  PracticeGameScreen,
+  PracticeHistoryScreen,
+} from './src/screens/practice';
 
 const Stack = createNativeStackNavigator();
 
@@ -56,6 +63,9 @@ const PlayButton = () => {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   homeButton: {
     width: TapTargets.minimum,
     height: TapTargets.minimum,
@@ -136,6 +146,30 @@ const AppNavigator = () => {
             headerLeft: HomeButton,
           }}
         />
+        {/* Practice Mode Screens */}
+        <Stack.Screen
+          name="PracticeSetup"
+          component={PracticeSetupScreen}
+          options={{
+            title: 'Practice Mode',
+            headerLeft: HomeButton,
+          }}
+        />
+        <Stack.Screen
+          name="PracticeGame"
+          component={PracticeGameScreen}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="PracticeHistory"
+          component={PracticeHistoryScreen}
+          options={{
+            title: 'Results',
+            headerShown: false,
+          }}
+        />
       </Stack.Navigator>
     </>
   );
@@ -143,17 +177,21 @@ const AppNavigator = () => {
 
 function App() {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <SettingsProvider>
-          <GameProvider>
-            <NavigationContainer>
-              <AppNavigator />
-            </NavigationContainer>
-          </GameProvider>
-        </SettingsProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={styles.container}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <SettingsProvider>
+            <GameProvider>
+              <PracticeGameProvider>
+                <NavigationContainer>
+                  <AppNavigator />
+                </NavigationContainer>
+              </PracticeGameProvider>
+            </GameProvider>
+          </SettingsProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

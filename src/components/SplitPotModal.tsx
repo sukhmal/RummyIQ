@@ -209,7 +209,7 @@ const SplitPotModal: React.FC<SplitPotModalProps> = ({
   const sortedPlayers = [...activePlayers].sort((a, b) => a.score - b.score);
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal visible={visible} transparent animationType="fade" supportedOrientations={['portrait', 'landscape']}>
       <View style={styles.overlay}>
         <BlurView
           style={StyleSheet.absoluteFill}

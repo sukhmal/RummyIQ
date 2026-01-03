@@ -68,7 +68,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal visible={visible} transparent animationType="fade" supportedOrientations={['portrait', 'landscape']}>
       <View style={styles.overlay}>
         <BlurView
           style={StyleSheet.absoluteFill}

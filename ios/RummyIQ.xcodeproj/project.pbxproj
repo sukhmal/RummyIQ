@@ -276,6 +276,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.sukhmal.rummyiq;
 				PRODUCT_NAME = RummyIQ;
+				SWIFT_OBJC_BRIDGING_HEADER = "RummyIQ/RummyIQ-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -303,6 +304,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.sukhmal.rummyiq;
 				PRODUCT_NAME = RummyIQ;
+				SWIFT_OBJC_BRIDGING_HEADER = "RummyIQ/RummyIQ-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 			};

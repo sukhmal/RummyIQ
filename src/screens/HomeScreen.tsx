@@ -124,6 +124,21 @@ const HomeScreen = ({ navigation }: any) => {
             </View>
             <Icon name="chevron.right" size={IconSize.medium} color={colors.tertiaryLabel} weight="semibold" />
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('PracticeSetup')}
+            accessibilityLabel="Practice with bots"
+            accessibilityRole="button">
+            <View style={[styles.actionIconContainer, { backgroundColor: colors.warning + '20' }]}>
+              <Icon name="gamecontroller.fill" size={IconSize.large} color={colors.warning} weight="medium" />
+            </View>
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Practice Mode</Text>
+              <Text style={styles.actionSubtitle}>Play against AI bots</Text>
+            </View>
+            <Icon name="chevron.right" size={IconSize.medium} color={colors.tertiaryLabel} weight="semibold" />
+          </TouchableOpacity>
         </View>
 
         {/* Past Games Section */}
