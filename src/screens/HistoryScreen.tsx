@@ -14,7 +14,7 @@ import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
 import Icon from '../components/Icon';
 import EditRoundModal from '../components/EditRoundModal';
-import { WinnerBanner, GameInfoBadges, Leaderboard, LeaderboardPlayer, PrimaryButton } from '../components/shared';
+import { WinnerBanner, GameInfoBadges, Leaderboard, LeaderboardPlayer, PrimaryButton, SectionHeader } from '../components/shared';
 import { ThemeColors, Typography, Spacing, IconSize, BorderRadius } from '../theme';
 import { Round } from '../types/game';
 
@@ -133,9 +133,7 @@ const HistoryScreen = ({ navigation, route }: any) => {
         {/* Score Progression Chart */}
         {chartData && (
           <View style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionLabel}>SCORE PROGRESSION</Text>
-            </View>
+            <SectionHeader label="SCORE PROGRESSION" />
             <View style={styles.chartCard}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <LineChart
@@ -178,21 +176,16 @@ const HistoryScreen = ({ navigation, route }: any) => {
 
         {/* Leaderboard */}
         <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionLabel}>LEADERBOARD</Text>
-            <TouchableOpacity
-              style={styles.sortToggle}
-              onPress={() => setSortByScore(!sortByScore)}
-              accessibilityLabel={sortByScore ? 'Show original order' : 'Sort by score'}
-              accessibilityRole="button">
-              <Icon
-                name={sortByScore ? 'arrow.up.arrow.down.circle.fill' : 'arrow.up.arrow.down.circle'}
-                size={IconSize.medium}
-                color={sortByScore ? colors.tint : colors.tertiaryLabel}
-                weight="medium"
-              />
-            </TouchableOpacity>
-          </View>
+          <SectionHeader
+            label="LEADERBOARD"
+            action={{
+              icon: 'arrow.up.arrow.down.circle',
+              iconFilled: 'arrow.up.arrow.down.circle.fill',
+              isActive: sortByScore,
+              onPress: () => setSortByScore(!sortByScore),
+              accessibilityLabel: sortByScore ? 'Show original order' : 'Sort by score',
+            }}
+          />
           <Leaderboard
             players={leaderboardPlayers.map((player): LeaderboardPlayer => ({
               id: player.id,
@@ -211,12 +204,7 @@ const HistoryScreen = ({ navigation, route }: any) => {
         {/* Round History */}
         {displayGame.rounds.length > 0 && (
           <View style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionLabel}>ROUND HISTORY</Text>
-              <View style={styles.roundHistoryBadge}>
-                <Text style={styles.roundHistoryBadgeText}>{displayGame.rounds.length}</Text>
-              </View>
-            </View>
+            <SectionHeader label="ROUND HISTORY" badge={displayGame.rounds.length} />
 
             {[...displayGame.rounds].reverse().map((round, index) => {
               const roundNumber = displayGame.rounds.length - index;
@@ -329,23 +317,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   section: {
     marginBottom: Spacing.lg,
   },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-    marginLeft: Spacing.xs,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.secondaryLabel,
-    letterSpacing: 0.5,
-  },
-  sortToggle: {
-    padding: Spacing.xs,
-    marginRight: Spacing.xs,
-  },
 
   // Chart Card
   chartCard: {
@@ -379,18 +350,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
 
   // Round History
-  roundHistoryBadge: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: 10,
-    marginRight: Spacing.xs,
-  },
-  roundHistoryBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.label,
-  },
   roundCard: {
     backgroundColor: colors.cardBackground,
     borderRadius: BorderRadius.large,

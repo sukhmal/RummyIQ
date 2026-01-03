@@ -20,7 +20,7 @@ import { usePracticeGame } from '../../context/PracticeGameContext';
 import { ThemeColors, Typography, Spacing, BorderRadius } from '../../theme';
 import Icon from '../../components/Icon';
 import { Card } from '../../components/practice';
-import { GameInfoBadges, WinnerBanner, PrimaryButton } from '../../components/shared';
+import { GameInfoBadges, WinnerBanner, PrimaryButton, ScreenFooter } from '../../components/shared';
 import { autoArrangeHand } from '../../engine/declaration';
 import { Meld, Card as CardType } from '../../engine/types';
 
@@ -265,7 +265,7 @@ const PracticeHistoryScreen = () => {
       </ScrollView>
 
       {/* Footer Actions */}
-      <View style={styles.footer}>
+      <ScreenFooter direction="row">
         <PrimaryButton
           label="Home"
           icon="house.fill"
@@ -282,7 +282,7 @@ const PracticeHistoryScreen = () => {
           size="compact"
           flex
         />
-      </View>
+      </ScreenFooter>
     </SafeAreaView>
   );
 };
@@ -464,14 +464,6 @@ const createStyles = (colors: ThemeColors) =>
     },
     zeroScore: {
       color: colors.success,
-    },
-    footer: {
-      flexDirection: 'row',
-      padding: Spacing.md,
-      gap: Spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: colors.separator,
-      backgroundColor: colors.cardBackground,
     },
   });
 

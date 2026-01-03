@@ -30,3 +30,13 @@ export type { LeaderboardProps, LeaderboardPlayer } from './Leaderboard';
 // Action components
 export { PrimaryButton } from './PrimaryButton';
 export type { PrimaryButtonProps } from './PrimaryButton';
+
+// Layout components
+export { SectionHeader } from './SectionHeader';
+export type { SectionHeaderProps } from './SectionHeader';
+
+export { CountBadge } from './CountBadge';
+export type { CountBadgeProps } from './CountBadge';
+
+export { ScreenFooter } from './ScreenFooter';
+export type { ScreenFooterProps } from './ScreenFooter';

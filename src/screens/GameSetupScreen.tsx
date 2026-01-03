@@ -18,7 +18,7 @@ import { useSettings, getCurrencySymbol } from '../context/SettingsContext';
 import { GameVariant, GameConfig, Player, PoolType } from '../types/game';
 import Icon from '../components/Icon';
 import { ThemeColors, Typography, Spacing, TapTargets, IconSize, BorderRadius } from '../theme';
-import { VariantSelector, PoolLimitSelector, NumberInputField, PrimaryButton } from '../components/shared';
+import { VariantSelector, PoolLimitSelector, NumberInputField, PrimaryButton, SectionHeader } from '../components/shared';
 
 const PRESET_POOL_LIMITS = [101, 201, 250] as const;
 
@@ -201,7 +201,7 @@ const GameSetupScreen = ({ navigation }: any) => {
 
         {/* Game Name Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>GAME NAME</Text>
+          <SectionHeader label="GAME NAME" />
           <View style={styles.card}>
             <View style={styles.inputRow}>
               <Icon name="pencil" size={IconSize.medium} color={colors.secondaryLabel} weight="medium" />
@@ -238,7 +238,7 @@ const GameSetupScreen = ({ navigation }: any) => {
         {/* Game Type Section - Only show when not using defaults */}
         {!useDefaults && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>GAME TYPE</Text>
+            <SectionHeader label="GAME TYPE" />
             <VariantSelector
               value={variant}
               onChange={setVariant}
@@ -251,7 +251,7 @@ const GameSetupScreen = ({ navigation }: any) => {
         {/* Pool Limit Section - Only show when not using defaults and variant is pool */}
         {!useDefaults && variant === 'pool' && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>POOL LIMIT</Text>
+            <SectionHeader label="POOL LIMIT" />
             <PoolLimitSelector
               value={poolLimit}
               onChange={setPoolLimit}
@@ -269,7 +269,7 @@ const GameSetupScreen = ({ navigation }: any) => {
             <View style={styles.sideBySideRow}>
               {/* First Drop */}
               <View style={styles.sideBySideItem}>
-                <Text style={styles.sectionLabel}>FIRST DROP</Text>
+                <SectionHeader label="FIRST DROP" />
                 <View style={styles.card}>
                   <View style={styles.compactInputRow}>
                     <TextInput
@@ -287,7 +287,7 @@ const GameSetupScreen = ({ navigation }: any) => {
 
               {/* Middle Drop */}
               <View style={styles.sideBySideItem}>
-                <Text style={styles.sectionLabel}>MIDDLE DROP</Text>
+                <SectionHeader label="MIDDLE DROP" />
                 <View style={styles.card}>
                   <View style={styles.compactInputRow}>
                     <TextInput
@@ -309,7 +309,7 @@ const GameSetupScreen = ({ navigation }: any) => {
         {/* Pool Settings - Join Table Amount */}
         {!useDefaults && variant === 'pool' && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>JOIN TABLE AMOUNT</Text>
+            <SectionHeader label="JOIN TABLE AMOUNT" />
             <NumberInputField
               value={joinTableAmount}
               onChange={setJoinTableAmount}
@@ -324,7 +324,7 @@ const GameSetupScreen = ({ navigation }: any) => {
         {/* Points Value Section - Only show when not using defaults */}
         {!useDefaults && variant === 'points' && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>POINT VALUE</Text>
+            <SectionHeader label="POINT VALUE" />
             <NumberInputField
               value={pointValue}
               onChange={setPointValue}
@@ -339,7 +339,7 @@ const GameSetupScreen = ({ navigation }: any) => {
         {/* Number of Deals Section - Only show when not using defaults */}
         {!useDefaults && variant === 'deals' && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>NUMBER OF DEALS</Text>
+            <SectionHeader label="NUMBER OF DEALS" />
             <NumberInputField
               value={numberOfDeals}
               onChange={setNumberOfDeals}
@@ -353,12 +353,7 @@ const GameSetupScreen = ({ navigation }: any) => {
 
         {/* Players Section */}
         <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionLabel}>PLAYERS</Text>
-            <View style={styles.playerCountBadge}>
-              <Text style={styles.playerCountText}>{players.length}/11</Text>
-            </View>
-          </View>
+          <SectionHeader label="PLAYERS" badge={`${players.length}/11`} />
           <View style={styles.card}>
             {players.map((player, index) => {
               const isLast = index === players.length - 1;
@@ -499,21 +494,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   section: {
     marginBottom: Spacing.lg,
   },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.secondaryLabel,
-    letterSpacing: 0.5,
-    marginBottom: Spacing.sm,
-    marginLeft: Spacing.xs,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-    marginLeft: Spacing.xs,
-  },
 
   // Card Styles
   card: {
@@ -603,18 +583,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
 
   // Player Styles
-  playerCountBadge: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: 10,
-    marginRight: Spacing.xs,
-  },
-  playerCountText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.label,
-  },
   playerRow: {
     flexDirection: 'row',
     alignItems: 'center',

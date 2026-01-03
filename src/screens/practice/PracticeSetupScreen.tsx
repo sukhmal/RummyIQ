@@ -24,7 +24,7 @@ import { BotDifficulty, PracticeVariant, PracticeGameConfig } from '../../engine
 import { DEFAULT_INVALID_DECLARATION } from '../../engine/scoring';
 import { ThemeColors, Typography, Spacing, BorderRadius, IconSize } from '../../theme';
 import Icon from '../../components/Icon';
-import { VariantSelector, NumberSelector, PrimaryButton } from '../../components/shared';
+import { VariantSelector, NumberSelector, PrimaryButton, SectionHeader, ScreenFooter } from '../../components/shared';
 
 const DIFFICULTY_OPTIONS: { value: BotDifficulty; label: string; icon: string }[] = [
   { value: 'easy', label: 'Easy', icon: 'tortoise.fill' },
@@ -79,7 +79,7 @@ const PracticeSetupScreen = () => {
 
         {/* Player Name */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Name</Text>
+          <SectionHeader label="YOUR NAME" />
           <View style={styles.inputContainer}>
             <Icon name="person.fill" size={IconSize.medium} color={colors.secondaryLabel} />
             <TextInput
@@ -95,7 +95,7 @@ const PracticeSetupScreen = () => {
 
         {/* Number of Bots */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Number of Opponents</Text>
+          <SectionHeader label="NUMBER OF OPPONENTS" />
           <NumberSelector
             value={botCount}
             onChange={setBotCount}
@@ -106,16 +106,14 @@ const PracticeSetupScreen = () => {
 
         {/* Difficulty */}
         <View style={styles.section}>
-          <View style={styles.sectionTitleRow}>
-            <Text style={styles.sectionTitle}>Bot Difficulty</Text>
-            <TouchableOpacity
-              onPress={() => setShowDifficultyInfo(true)}
-              style={styles.infoButton}
-              accessibilityLabel="Learn about bot difficulties"
-            >
-              <Icon name="info.circle" size={IconSize.medium} color={colors.accent} />
-            </TouchableOpacity>
-          </View>
+          <SectionHeader
+            label="BOT DIFFICULTY"
+            action={{
+              icon: 'info.circle',
+              onPress: () => setShowDifficultyInfo(true),
+              accessibilityLabel: 'Learn about bot difficulties',
+            }}
+          />
           <View style={styles.optionsRow}>
             {DIFFICULTY_OPTIONS.map((option) => (
               <TouchableOpacity
@@ -147,7 +145,7 @@ const PracticeSetupScreen = () => {
 
         {/* Game Variant */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Game Variant</Text>
+          <SectionHeader label="GAME VARIANT" />
           <VariantSelector
             value={variant}
             onChange={setVariant}
@@ -159,7 +157,7 @@ const PracticeSetupScreen = () => {
         {/* Pool limit (for Pool variant) */}
         {variant === 'pool' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Point Limit</Text>
+            <SectionHeader label="POINT LIMIT" />
             <NumberSelector
               value={poolLimit}
               onChange={setPoolLimit}
@@ -172,7 +170,7 @@ const PracticeSetupScreen = () => {
         {/* Deals count (for Deals variant) */}
         {variant === 'deals' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Number of Deals</Text>
+            <SectionHeader label="NUMBER OF DEALS" />
             <NumberSelector
               value={numberOfDeals}
               onChange={setNumberOfDeals}
@@ -183,7 +181,7 @@ const PracticeSetupScreen = () => {
       </ScrollView>
 
       {/* Start Button */}
-      <View style={styles.footer}>
+      <ScreenFooter>
         <PrimaryButton
           label="Start Game"
           icon="play.fill"
@@ -191,7 +189,7 @@ const PracticeSetupScreen = () => {
           color="success"
           size="compact"
         />
-      </View>
+      </ScreenFooter>
 
       {/* Difficulty Info Modal */}
       <Modal
@@ -331,11 +329,6 @@ const createStyles = (colors: ThemeColors) =>
     section: {
       marginBottom: Spacing.xl,
     },
-    sectionTitle: {
-      ...Typography.headline,
-      color: colors.label,
-      marginBottom: Spacing.sm,
-    },
     inputContainer: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -378,21 +371,6 @@ const createStyles = (colors: ThemeColors) =>
     },
     selectedOptionLabel: {
       color: colors.accent,
-    },
-    footer: {
-      padding: Spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: colors.separator,
-      backgroundColor: colors.cardBackground,
-    },
-    sectionTitleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: Spacing.sm,
-    },
-    infoButton: {
-      padding: Spacing.xs,
     },
     modalBlur: {
       flex: 1,
