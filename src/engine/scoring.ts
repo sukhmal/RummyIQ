@@ -28,6 +28,11 @@ export const DEFAULT_INVALID_DECLARATION = 80;
 /**
  * Calculate points for a player's hand at end of round
  * Winner gets 0 points, others get their deadwood points (capped at 80)
+ *
+ * Indian Rummy Rules:
+ * - If no pure sequence: max 80 points (full count)
+ * - If no second sequence: sets don't count, their cards are deadwood
+ * - Otherwise: deadwood points capped at 80
  */
 export const calculateHandPoints = (hand: Card[]): number => {
   const analysis = autoArrangeHand(hand);
@@ -37,11 +42,29 @@ export const calculateHandPoints = (hand: Card[]): number => {
     return 0;
   }
 
+  // If no pure sequence, full count (max 80)
+  if (!analysis.hasPureSequence) {
+    return MAX_ROUND_POINTS;
+  }
+
+  // If less than 2 sequences, sets don't count - calculate with all non-sequence cards
+  if (analysis.sequenceCount < 2) {
+    // All cards not in sequences are deadwood
+    const sequenceCards = new Set<string>();
+    for (const meld of analysis.melds) {
+      if (meld.type === 'sequence' || meld.type === 'pure-sequence') {
+        for (const card of meld.cards) {
+          sequenceCards.add(card.id);
+        }
+      }
+    }
+    const deadwoodCards = hand.filter(c => !sequenceCards.has(c.id));
+    const points = calculateDeadwoodPoints(deadwoodCards);
+    return Math.min(points, MAX_ROUND_POINTS);
+  }
+
   // Otherwise, calculate deadwood points
   const points = calculateDeadwoodPoints(analysis.deadwood);
-
-  // Add points from invalid melds (shouldn't happen if properly validated)
-  // But in case of invalid declaration, count all cards
   return Math.min(points, MAX_ROUND_POINTS);
 };
 

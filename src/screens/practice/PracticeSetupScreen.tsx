@@ -12,7 +12,9 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Modal,
 } from 'react-native';
+import { BlurView } from '@react-native-community/blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
@@ -49,6 +51,7 @@ const PracticeSetupScreen = () => {
   const [variant, setVariant] = useState<PracticeVariant>('points');
   const [poolLimit, setPoolLimit] = useState(201);
   const [numberOfDeals, setNumberOfDeals] = useState(3);
+  const [showDifficultyInfo, setShowDifficultyInfo] = useState(false);
 
   const handleStartGame = useCallback(async () => {
     const config: PracticeGameConfig = {
@@ -126,7 +129,16 @@ const PracticeSetupScreen = () => {
 
         {/* Difficulty */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Bot Difficulty</Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={styles.sectionTitle}>Bot Difficulty</Text>
+            <TouchableOpacity
+              onPress={() => setShowDifficultyInfo(true)}
+              style={styles.infoButton}
+              accessibilityLabel="Learn about bot difficulties"
+            >
+              <Icon name="info.circle" size={IconSize.medium} color={colors.accent} />
+            </TouchableOpacity>
+          </View>
           <View style={styles.optionsRow}>
             {DIFFICULTY_OPTIONS.map((option) => (
               <TouchableOpacity
@@ -258,6 +270,104 @@ const PracticeSetupScreen = () => {
           <Text style={styles.startButtonText}>Start Game</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Difficulty Info Modal */}
+      <Modal
+        visible={showDifficultyInfo}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDifficultyInfo(false)}
+        supportedOrientations={['portrait', 'landscape']}
+      >
+        <BlurView style={styles.modalBlur} blurType="dark" blurAmount={10}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Bot Difficulty Levels</Text>
+              <TouchableOpacity
+                onPress={() => setShowDifficultyInfo(false)}
+                style={styles.modalCloseButton}
+              >
+                <Icon name="xmark.circle.fill" size={28} color={colors.secondaryLabel} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              {/* Easy Bot */}
+              <View style={styles.difficultySection}>
+                <View style={styles.difficultyHeader}>
+                  <Icon name="tortoise.fill" size={IconSize.large} color={colors.success} />
+                  <Text style={[styles.difficultyTitle, { color: colors.success }]}>Easy</Text>
+                </View>
+                <Text style={styles.difficultySubtitle}>Mostly random with minimal logic</Text>
+                <View style={styles.difficultyDetails}>
+                  <Text style={styles.detailItem}>• Draws from deck 80% of the time</Text>
+                  <Text style={styles.detailItem}>• Discards highest value cards randomly</Text>
+                  <Text style={styles.detailItem}>• Rarely drops (5% chance on first turn)</Text>
+                  <Text style={styles.detailItem}>• No meld awareness</Text>
+                </View>
+              </View>
+
+              {/* Medium Bot */}
+              <View style={styles.difficultySection}>
+                <View style={styles.difficultyHeader}>
+                  <Icon name="hare.fill" size={IconSize.large} color={colors.warning} />
+                  <Text style={[styles.difficultyTitle, { color: colors.warning }]}>Medium</Text>
+                </View>
+                <Text style={styles.difficultySubtitle}>Basic meld awareness</Text>
+                <View style={styles.difficultyDetails}>
+                  <Text style={styles.detailItem}>• Always picks up jokers from discard</Text>
+                  <Text style={styles.detailItem}>• Picks discard if it helps form melds</Text>
+                  <Text style={styles.detailItem}>• Avoids discarding potential meld cards</Text>
+                  <Text style={styles.detailItem}>• Strategic dropping based on hand quality</Text>
+                </View>
+              </View>
+
+              {/* Hard Bot */}
+              <View style={styles.difficultySection}>
+                <View style={styles.difficultyHeader}>
+                  <Icon name="bolt.fill" size={IconSize.large} color={colors.destructive} />
+                  <Text style={[styles.difficultyTitle, { color: colors.destructive }]}>Hard</Text>
+                </View>
+                <Text style={styles.difficultySubtitle}>Tracks discards, opponent awareness</Text>
+                <View style={styles.difficultyDetails}>
+                  <Text style={styles.detailItem}>• Evaluates hand improvement before picking</Text>
+                  <Text style={styles.detailItem}>• Tracks discard history to find safe discards</Text>
+                  <Text style={styles.detailItem}>• Avoids giving opponents useful cards</Text>
+                  <Text style={styles.detailItem}>• Calculates expected value for drop decisions</Text>
+                </View>
+              </View>
+
+              {/* Comparison Table */}
+              <View style={styles.comparisonSection}>
+                <Text style={styles.comparisonTitle}>Feature Comparison</Text>
+                <View style={styles.comparisonTable}>
+                  <View style={styles.comparisonRow}>
+                    <Text style={styles.comparisonLabel}>Tracks discards</Text>
+                    <Text style={styles.comparisonValue}>❌  ❌  ✅</Text>
+                  </View>
+                  <View style={styles.comparisonRow}>
+                    <Text style={styles.comparisonLabel}>Evaluates hand value</Text>
+                    <Text style={styles.comparisonValue}>❌  ❌  ✅</Text>
+                  </View>
+                  <View style={styles.comparisonRow}>
+                    <Text style={styles.comparisonLabel}>Meld awareness</Text>
+                    <Text style={styles.comparisonValue}>❌  ✅  ✅</Text>
+                  </View>
+                  <View style={styles.comparisonRow}>
+                    <Text style={styles.comparisonLabel}>Strategic dropping</Text>
+                    <Text style={styles.comparisonValue}>❌  ✅  ✅</Text>
+                  </View>
+                  <View style={styles.comparisonRow}>
+                    <Text style={styles.comparisonLabel}>Opponent modeling</Text>
+                    <Text style={styles.comparisonValue}>❌  ❌  ✅</Text>
+                  </View>
+                </View>
+                <Text style={styles.comparisonLegend}>Easy  Medium  Hard</Text>
+              </View>
+            </ScrollView>
+          </View>
+        </BlurView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -444,6 +554,116 @@ const createStyles = (colors: ThemeColors) =>
       ...Typography.headline,
       color: '#FFFFFF',
       fontWeight: '700',
+    },
+    sectionTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: Spacing.sm,
+    },
+    infoButton: {
+      padding: Spacing.xs,
+    },
+    modalBlur: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      width: '90%',
+      maxHeight: '85%',
+      backgroundColor: colors.cardBackground,
+      borderRadius: BorderRadius.large,
+      padding: Spacing.md,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.md,
+    },
+    modalTitle: {
+      ...Typography.title2,
+      color: colors.label,
+      fontWeight: '700',
+    },
+    modalCloseButton: {
+      padding: Spacing.xs,
+    },
+    modalScroll: {
+      maxHeight: 500,
+    },
+    difficultySection: {
+      backgroundColor: colors.background,
+      borderRadius: BorderRadius.medium,
+      padding: Spacing.md,
+      marginBottom: Spacing.md,
+    },
+    difficultyHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      marginBottom: Spacing.xs,
+    },
+    difficultyTitle: {
+      ...Typography.headline,
+      fontWeight: '700',
+    },
+    difficultySubtitle: {
+      ...Typography.subheadline,
+      color: colors.secondaryLabel,
+      marginBottom: Spacing.sm,
+    },
+    difficultyDetails: {
+      gap: 4,
+    },
+    detailItem: {
+      ...Typography.footnote,
+      color: colors.label,
+      lineHeight: 18,
+    },
+    comparisonSection: {
+      backgroundColor: colors.background,
+      borderRadius: BorderRadius.medium,
+      padding: Spacing.md,
+      marginBottom: Spacing.md,
+    },
+    comparisonTitle: {
+      ...Typography.subheadline,
+      color: colors.label,
+      fontWeight: '600',
+      marginBottom: Spacing.sm,
+      textAlign: 'center',
+    },
+    comparisonTable: {
+      gap: Spacing.xs,
+    },
+    comparisonRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.separator,
+    },
+    comparisonLabel: {
+      ...Typography.footnote,
+      color: colors.secondaryLabel,
+      flex: 1,
+    },
+    comparisonValue: {
+      ...Typography.footnote,
+      color: colors.label,
+      fontFamily: 'Menlo',
+      letterSpacing: 2,
+    },
+    comparisonLegend: {
+      ...Typography.caption2,
+      color: colors.tertiaryLabel,
+      textAlign: 'right',
+      marginTop: Spacing.xs,
+      fontFamily: 'Menlo',
+      letterSpacing: 1,
     },
   });
 

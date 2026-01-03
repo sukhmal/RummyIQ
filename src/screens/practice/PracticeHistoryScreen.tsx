@@ -19,6 +19,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { usePracticeGame } from '../../context/PracticeGameContext';
 import { ThemeColors, Typography, Spacing, BorderRadius, IconSize } from '../../theme';
 import Icon from '../../components/Icon';
+import { Card } from '../../components/practice';
+import { autoArrangeHand } from '../../engine/declaration';
+import { Meld, Card as CardType } from '../../engine/types';
 
 const PracticeHistoryScreen = () => {
   const { colors } = useTheme();
@@ -44,6 +47,51 @@ const PracticeHistoryScreen = () => {
     Orientation.unlockAllOrientations();
     await resetGame();
     navigation.navigate('Home');
+  };
+
+  // Get arranged hands for all players (must be before conditional return for hooks rule)
+  // For the winner: use their declared melds
+  // For others: use autoArrangeHand
+  const arrangedHands = useMemo(() => {
+    const hands: { [playerId: string]: { melds: Meld[]; deadwood: CardType[] } } = {};
+
+    // Get the last round result which has declared melds and final hands
+    const lastResult = gameState?.roundResults[gameState.roundResults.length - 1];
+    const finalHands = lastResult?.finalHands || gameState?.currentRound?.hands || {};
+    const declaredMelds = lastResult?.declaredMelds;
+    const winnerId = lastResult?.winnerId;
+
+    Object.entries(finalHands).forEach(([playerId, hand]) => {
+      if (hand.length > 0) {
+        // For the winner with valid declaration, use their declared melds
+        if (playerId === winnerId && declaredMelds && declaredMelds.length > 0) {
+          // Calculate deadwood from declared melds
+          const meldCardIds = new Set(declaredMelds.flatMap(m => m.cards.map(c => c.id)));
+          const deadwood = hand.filter(c => !meldCardIds.has(c.id));
+          hands[playerId] = { melds: declaredMelds, deadwood };
+        } else {
+          // For others, use autoArrangeHand (first 13 cards)
+          const handToArrange = hand.slice(0, 13);
+          hands[playerId] = autoArrangeHand(handToArrange);
+        }
+      }
+    });
+
+    return hands;
+  }, [gameState?.roundResults, gameState?.currentRound?.hands]);
+
+  // Helper to get meld type label
+  const getMeldTypeLabel = (meld: Meld): string => {
+    if (meld.type === 'pure-sequence') return 'Pure';
+    if (meld.type === 'sequence') return 'Seq';
+    return 'Set';
+  };
+
+  // Helper to get meld type color
+  const getMeldTypeColor = (meld: Meld): string => {
+    if (meld.type === 'pure-sequence') return colors.success;
+    if (meld.type === 'sequence') return colors.accent;
+    return colors.warning;
   };
 
   if (!gameState) {
@@ -73,92 +121,81 @@ const PracticeHistoryScreen = () => {
     return scoreA - scoreB;
   });
 
-  const isPoolVariant = gameState.config.variant.startsWith('pool');
-
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Winner Banner */}
-        {gameState.winner && (
-          <View style={styles.winnerBanner}>
-            <Icon name="trophy.fill" size={40} color={colors.gold} weight="medium" />
-            <Text style={styles.winnerTitle}>Winner!</Text>
-            <Text style={styles.winnerName}>{gameState.winner.name}</Text>
-            <Text style={styles.winnerScore}>
-              {gameState.scores[gameState.winner.id] || 0} points
-            </Text>
-          </View>
-        )}
+        {/* Final Hands - Show all players' melds */}
+        {Object.keys(arrangedHands).length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Final Hands</Text>
+            {sortedPlayers.map((player) => {
+              const arranged = arrangedHands[player.id];
+              if (!arranged) return null;
 
-        {/* Final Standings */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Final Standings</Text>
-          {sortedPlayers.map((player, index) => {
-            const score = gameState.scores[player.id] || 0;
-            const isWinner = gameState.winner?.id === player.id;
-            const isEliminated = isPoolVariant && gameState.activePlayers.indexOf(player.id) === -1;
+              const isWinner = gameState.winner?.id === player.id;
 
-            return (
-              <View
-                key={player.id}
-                style={[
-                  styles.playerRow,
-                  isWinner && styles.winnerRow,
-                  isEliminated && styles.eliminatedRow,
-                ]}
-              >
-                <View style={styles.rankContainer}>
-                  <Text style={[styles.rankText, isWinner && styles.winnerRankText]}>
-                    {index + 1}
-                  </Text>
-                </View>
-                <View style={styles.playerInfo}>
-                  <View style={styles.playerNameRow}>
-                    <Icon
-                      name={player.isBot ? 'cpu' : 'person.fill'}
-                      size={14}
-                      color={isWinner ? colors.gold : colors.secondaryLabel}
-                    />
-                    <Text
-                      style={[
-                        styles.playerName,
-                        isWinner && styles.winnerPlayerName,
-                        isEliminated && styles.eliminatedText,
-                      ]}
-                    >
-                      {player.name}
+              return (
+                <View key={player.id} style={[styles.handCard, isWinner && styles.winnerHandCard]}>
+                  <View style={styles.handHeader}>
+                    <View style={styles.handPlayerInfo}>
+                      <Icon
+                        name={player.isBot ? 'cpu' : 'person.fill'}
+                        size={14}
+                        color={isWinner ? colors.gold : colors.label}
+                      />
+                      <Text style={[styles.handPlayerName, isWinner && styles.winnerHandPlayerName]}>
+                        {player.id === 'human' ? 'You' : player.name}
+                      </Text>
+                      {isWinner && (
+                        <Icon name="crown.fill" size={14} color={colors.gold} />
+                      )}
+                    </View>
+                    <Text style={[styles.handScore, isWinner && styles.winnerHandScore]}>
+                      {gameState.scores[player.id] || 0} pts
                     </Text>
-                    {isWinner && (
-                      <Icon name="crown.fill" size={14} color={colors.gold} />
+                  </View>
+
+                  {/* All cards in one line with gaps between groups */}
+                  <View style={styles.allCardsRow}>
+                    {arranged.melds.map((meld, meldIdx) => (
+                      <View key={meldIdx} style={[styles.meldGroupContainer, meldIdx > 0 && styles.meldGap]}>
+                        <View style={styles.meldGroup}>
+                          {meld.cards.map((card, idx) => (
+                            <View key={card.id} style={[styles.cardWrapper, idx > 0 && styles.cardOverlap]}>
+                              <Card card={card} size="medium" />
+                            </View>
+                          ))}
+                        </View>
+                        <View style={[styles.meldTypeBadgeOverlay, { backgroundColor: getMeldTypeColor(meld) }]}>
+                          <Text style={styles.meldTypeBadgeText}>{getMeldTypeLabel(meld)}</Text>
+                        </View>
+                      </View>
+                    ))}
+                    {arranged.deadwood.length > 0 && (
+                      <View style={[styles.meldGroupContainer, styles.meldGap]}>
+                        <View style={[styles.meldGroup, styles.deadwoodGroup]}>
+                          {arranged.deadwood.map((card, idx) => (
+                            <View key={card.id} style={[styles.cardWrapper, idx > 0 && styles.cardOverlap]}>
+                              <Card card={card} size="medium" />
+                            </View>
+                          ))}
+                        </View>
+                        <View style={[styles.meldTypeBadgeOverlay, { backgroundColor: colors.destructive }]}>
+                          <Text style={styles.meldTypeBadgeText}>
+                            {arranged.deadwood.reduce((sum, c) => sum + c.value, 0)}pts
+                          </Text>
+                        </View>
+                      </View>
                     )}
                   </View>
-                  {player.isBot && player.difficulty && (
-                    <Text style={styles.difficultyLabel}>
-                      {player.difficulty.charAt(0).toUpperCase() + player.difficulty.slice(1)}
-                    </Text>
-                  )}
                 </View>
-                <View style={styles.scoreContainer}>
-                  <Text
-                    style={[
-                      styles.scoreText,
-                      isWinner && styles.winnerScoreText,
-                      isEliminated && styles.eliminatedText,
-                    ]}
-                  >
-                    {score}
-                  </Text>
-                  {isEliminated && (
-                    <Text style={styles.eliminatedLabel}>OUT</Text>
-                  )}
-                </View>
-              </View>
-            );
-          })}
-        </View>
+              );
+            })}
+          </View>
+        )}
 
         {/* Round History */}
         <View style={styles.section}>
@@ -277,30 +314,6 @@ const createStyles = (colors: ThemeColors) =>
       color: '#FFFFFF',
       fontWeight: '600',
     },
-    winnerBanner: {
-      alignItems: 'center',
-      paddingVertical: Spacing.xl,
-      backgroundColor: colors.gold + '15',
-      borderRadius: BorderRadius.large,
-      marginBottom: Spacing.lg,
-      borderWidth: 1,
-      borderColor: colors.gold + '30',
-    },
-    winnerTitle: {
-      ...Typography.title2,
-      color: colors.gold,
-      marginTop: Spacing.sm,
-    },
-    winnerName: {
-      ...Typography.title1,
-      color: colors.label,
-      marginTop: Spacing.xs,
-    },
-    winnerScore: {
-      ...Typography.subheadline,
-      color: colors.secondaryLabel,
-      marginTop: Spacing.xs,
-    },
     section: {
       marginBottom: Spacing.xl,
     },
@@ -309,77 +322,90 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.label,
       marginBottom: Spacing.md,
     },
-    playerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: Spacing.md,
+    // Final Hands styles
+    handCard: {
       backgroundColor: colors.cardBackground,
       borderRadius: BorderRadius.medium,
+      padding: Spacing.sm,
       marginBottom: Spacing.sm,
       borderWidth: 1,
       borderColor: colors.separator,
     },
-    winnerRow: {
+    winnerHandCard: {
       backgroundColor: colors.gold + '15',
       borderColor: colors.gold,
     },
-    eliminatedRow: {
-      opacity: 0.6,
-    },
-    rankContainer: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: colors.background,
-      justifyContent: 'center',
+    handHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
       alignItems: 'center',
-      marginRight: Spacing.md,
+      marginBottom: Spacing.xs,
+      paddingBottom: Spacing.xs,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.separator,
     },
-    rankText: {
-      ...Typography.headline,
-      color: colors.label,
-    },
-    winnerRankText: {
-      color: colors.gold,
-    },
-    playerInfo: {
-      flex: 1,
-    },
-    playerNameRow: {
+    handPlayerInfo: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: Spacing.xs,
     },
-    playerName: {
-      ...Typography.body,
+    handPlayerName: {
+      ...Typography.subheadline,
       color: colors.label,
       fontWeight: '600',
     },
-    winnerPlayerName: {
+    winnerHandPlayerName: {
       color: colors.gold,
     },
-    eliminatedText: {
-      color: colors.tertiaryLabel,
+    handScore: {
+      ...Typography.subheadline,
+      color: colors.secondaryLabel,
+      fontWeight: '600',
     },
-    difficultyLabel: {
-      ...Typography.caption2,
-      color: colors.tertiaryLabel,
-      marginTop: 2,
+    winnerHandScore: {
+      color: colors.gold,
     },
-    scoreContainer: {
+    allCardsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'flex-end',
+      marginTop: Spacing.xs,
     },
-    scoreText: {
-      ...Typography.title3,
-      color: colors.label,
+    meldGroupContainer: {
+      position: 'relative',
     },
-    winnerScoreText: {
-      color: colors.gold,
+    meldTypeBadgeOverlay: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      paddingVertical: 3,
+      alignItems: 'center',
+      borderBottomLeftRadius: BorderRadius.small,
+      borderBottomRightRadius: BorderRadius.small,
     },
-    eliminatedLabel: {
-      ...Typography.caption2,
-      color: colors.destructive,
-      marginTop: 2,
+    meldTypeBadgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      textShadowColor: 'rgba(0,0,0,0.5)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
+    },
+    meldGroup: {
+      flexDirection: 'row',
+    },
+    meldGap: {
+      marginLeft: Spacing.sm,
+    },
+    deadwoodGroup: {
+      opacity: 0.6,
+    },
+    cardWrapper: {
+      marginBottom: 2,
+    },
+    cardOverlap: {
+      marginLeft: -30,
     },
     roundCard: {
       backgroundColor: colors.cardBackground,

@@ -90,7 +90,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
   const poolLimitIndex = POOL_LIMITS.indexOf(defaults.poolLimit as 101 | 201 | 250);
 
   return (
-    <Modal visible={visible} transparent animationType="none">
+    <Modal visible={visible} transparent animationType="none" supportedOrientations={['portrait', 'landscape']}>
       <View style={styles.container}>
         {/* Backdrop */}
         <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} pointerEvents="none">

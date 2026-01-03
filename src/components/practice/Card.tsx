@@ -22,7 +22,7 @@ interface CardProps {
   isSelected?: boolean;
   isFaceDown?: boolean;
   isDisabled?: boolean;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'tiny' | 'small' | 'medium' | 'large';
   onPress?: (card: CardType) => void;
   onLongPress?: (card: CardType) => void;
   style?: ViewStyle;
@@ -142,8 +142,8 @@ const Card: React.FC<CardProps> = ({
   );
 };
 
-const createStyles = (colors: ThemeColors, size: 'small' | 'medium' | 'large') => {
-  const sizeMultiplier = size === 'small' ? 0.7 : size === 'large' ? 1.3 : 1;
+const createStyles = (colors: ThemeColors, size: 'tiny' | 'small' | 'medium' | 'large') => {
+  const sizeMultiplier = size === 'tiny' ? 0.5 : size === 'small' ? 0.7 : size === 'large' ? 1.3 : 1;
   const cardWidth = 60 * sizeMultiplier;
   const cardHeight = 84 * sizeMultiplier;
 

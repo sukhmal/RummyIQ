@@ -63,6 +63,9 @@ const PlayButton = () => {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   homeButton: {
     width: TapTargets.minimum,
     height: TapTargets.minimum,
@@ -171,12 +174,6 @@ const AppNavigator = () => {
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 
 function App() {
   return (

@@ -39,16 +39,6 @@ export const hardBotDecide = (context: BotContext): BotDecision => {
     };
   }
 
-  // Check if can declare
-  if (turnPhase === 'discard' && canDeclare(hand)) {
-    const analysis = autoArrangeHand(hand);
-    return {
-      action: 'declare',
-      melds: analysis.melds,
-      thinkingTime,
-    };
-  }
-
   // Draw phase
   if (turnPhase === 'draw') {
     const source = decideDrawSourceHard(hand, topDiscard, discardHistory);
@@ -60,7 +50,31 @@ export const hardBotDecide = (context: BotContext): BotDecision => {
     };
   }
 
-  // Discard phase
+  // Discard phase - check if we can declare by discarding a specific card
+  if (turnPhase === 'discard') {
+    // Check each card - if discarding it leaves a winning hand, declare!
+    for (const cardToDiscard of hand) {
+      const remainingHand = hand.filter(c => c.id !== cardToDiscard.id);
+      if (canDeclare(remainingHand)) {
+        const analysis = autoArrangeHand(remainingHand);
+        return {
+          action: 'declare',
+          melds: analysis.melds,
+          thinkingTime,
+        };
+      }
+    }
+
+    // No winning discard found, just discard normally
+    const cardToDiscard = decideDiscardHard(hand, discardHistory);
+    return {
+      action: 'discard',
+      card: cardToDiscard,
+      thinkingTime,
+    };
+  }
+
+  // Fallback
   const cardToDiscard = decideDiscardHard(hand, discardHistory);
   return {
     action: 'discard',

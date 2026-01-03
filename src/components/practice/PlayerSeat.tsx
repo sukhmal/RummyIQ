@@ -74,13 +74,13 @@ const PlayerSeat: React.FC<PlayerSeatProps> = ({
         )}
       </View>
 
-      {/* Name */}
-      <Text style={styles.name} numberOfLines={1}>
-        {isHuman ? 'You' : player.name}
-      </Text>
-
-      {/* Score */}
-      <Text style={styles.score}>{score}</Text>
+      {/* Name and Score */}
+      <View style={styles.nameRow}>
+        <Text style={styles.name} numberOfLines={1}>
+          {isHuman ? 'You' : player.name}
+        </Text>
+        <Text style={styles.score}>{score}</Text>
+      </View>
 
       {/* Turn indicator arrow */}
       {isCurrentTurn && (
@@ -126,17 +126,21 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.label,
       fontWeight: '600',
     },
+    nameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: Spacing.xs,
+      gap: 4,
+    },
     name: {
       ...Typography.caption1,
       color: colors.label,
       fontWeight: '500',
-      marginTop: Spacing.xs,
       textAlign: 'center',
     },
     score: {
       ...Typography.caption2,
       color: colors.secondaryLabel,
-      marginTop: 2,
     },
     dealerBadge: {
       position: 'absolute',

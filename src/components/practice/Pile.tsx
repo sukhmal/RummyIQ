@@ -6,7 +6,7 @@
  * Includes visual feedback when tappable.
  */
 
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,11 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import {
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
+  State,
+} from 'react-native-gesture-handler';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import { useTheme } from '../../context/ThemeContext';
 import { Card as CardType } from '../../engine/types';
@@ -27,11 +32,14 @@ const hapticOptions = {
   ignoreAndroidSystemSettings: false,
 };
 
+const DRAW_THRESHOLD = 50; // Drag down this many pixels to draw
+
 interface PileProps {
   type: 'draw' | 'discard';
   cards: CardType[];
   topCard?: CardType | null;
   onPress?: () => void;
+  onDragDraw?: (absoluteX: number) => void; // Called when card is dragged to draw, passes X position
   isDisabled?: boolean;
   showCount?: boolean;
   label?: string;
@@ -43,6 +51,7 @@ const Pile: React.FC<PileProps> = ({
   cards,
   topCard,
   onPress,
+  onDragDraw,
   isDisabled = false,
   showCount = true,
   label,
@@ -54,6 +63,10 @@ const Pile: React.FC<PileProps> = ({
   const cardCount = cards.length;
   const displayCard = type === 'discard' ? topCard : null;
   const canTap = !isDisabled && !!onPress;
+
+  // Drag state for drag-to-draw
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   // Pulsing animation for tappable piles
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -114,6 +127,32 @@ const Pile: React.FC<PileProps> = ({
     }
   };
 
+  // Handle drag gesture for drag-to-draw
+  const handlePanGesture = useCallback((event: PanGestureHandlerGestureEvent) => {
+    const { translationX, translationY, absoluteX, state } = event.nativeEvent;
+
+    if (state === State.BEGAN) {
+      setIsDragging(true);
+      ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
+    } else if (state === State.ACTIVE) {
+      setDragOffset({ x: translationX, y: translationY });
+    } else if (state === State.END || state === State.CANCELLED || state === State.FAILED) {
+      if (state === State.END && translationY > DRAW_THRESHOLD) {
+        // Dragged down past threshold - trigger draw
+        ReactNativeHapticFeedback.trigger('notificationSuccess', hapticOptions);
+        if (onDragDraw) {
+          // Use drag draw callback with position for insertion
+          onDragDraw(absoluteX);
+        } else if (onPress) {
+          // Fallback to simple press
+          onPress();
+        }
+      }
+      setIsDragging(false);
+      setDragOffset({ x: 0, y: 0 });
+    }
+  }, [onPress, onDragDraw]);
+
   const glowStyle = canTap ? {
     shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 0 },
@@ -121,14 +160,28 @@ const Pile: React.FC<PileProps> = ({
     shadowRadius: 12,
   } : {};
 
-  const renderPileStack = () => {
-    // Show stacked card effect for draw pile
+  // Get the card underneath the top card (for reveal during drag)
+  const getSecondCard = (): CardType | null => {
+    if (type === 'discard') {
+      // Return the second card in discard pile
+      return cards.length > 1 ? cards[cards.length - 2] : null;
+    }
+    // For draw pile, we just show another face-down card
+    return cards.length > 1 ? cards[1] : null;
+  };
+
+  const secondCard = getSecondCard();
+
+  // Render the base/underlying cards (static, shown when dragging)
+  const renderBaseStack = () => {
     if (type === 'draw') {
       const stackDepth = Math.min(3, Math.floor(cardCount / 10) + 1);
+      // When dragging, we show one less card in the stack
+      const visibleDepth = isDragging ? Math.max(1, stackDepth - 1) : stackDepth;
 
       return (
         <View style={styles.stackContainer}>
-          {Array.from({ length: stackDepth }).map((_, index) => (
+          {Array.from({ length: visibleDepth }).map((_, index) => (
             <View
               key={index}
               style={[
@@ -136,7 +189,7 @@ const Pile: React.FC<PileProps> = ({
                 {
                   bottom: index * 2,
                   left: index * 1,
-                  zIndex: stackDepth - index,
+                  zIndex: visibleDepth - index,
                 },
               ]}
             >
@@ -151,7 +204,17 @@ const Pile: React.FC<PileProps> = ({
       );
     }
 
-    // Discard pile - show top card face up
+    // Discard pile - when dragging, show the card underneath
+    if (isDragging && secondCard) {
+      return (
+        <Card
+          card={secondCard}
+          size="medium"
+        />
+      );
+    }
+
+    // Not dragging - show top card normally
     if (displayCard) {
       return (
         <Card
@@ -169,43 +232,100 @@ const Pile: React.FC<PileProps> = ({
     );
   };
 
-  return (
-    <TouchableOpacity
-      style={[styles.container, style]}
-      onPress={handlePress}
-      disabled={!canTap}
-      activeOpacity={0.7}
-      accessibilityLabel={`${label || type} pile${cardCount > 0 ? `, ${cardCount} cards` : ', empty'}${canTap ? ', tap to draw' : ''}`}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: !canTap }}
-    >
-      <Animated.View
-        style={[
-          styles.pileWrapper,
-          { transform: [{ scale: pulseAnim }] },
-          glowStyle,
-        ]}
-      >
-        {renderPileStack()}
+  // Render the dragging card (top card that moves with finger)
+  const renderDraggingCard = () => {
+    if (!isDragging) return null;
 
-        {/* Tap indicator when active */}
-        {canTap && (
-          <View style={styles.tapIndicator}>
-            <Text style={styles.tapText}>TAP</Text>
-          </View>
-        )}
-      </Animated.View>
-
-      {label && (
-        <Text style={[styles.label, canTap && styles.labelActive]}>{label}</Text>
-      )}
-
-      {showCount && (
-        <View style={[styles.countBadge, canTap && styles.countBadgeActive]}>
-          <Text style={styles.countText}>{cardCount}</Text>
+    if (type === 'draw') {
+      return (
+        <View
+          style={[
+            styles.draggingCardContainer,
+            {
+              transform: [
+                { translateX: dragOffset.x },
+                { translateY: dragOffset.y },
+              ],
+            },
+          ]}
+        >
+          <Card
+            card={cards[0] || { id: 'placeholder', suit: 'spades', rank: 'A', jokerType: null, value: 0 }}
+            isFaceDown
+            size="medium"
+          />
         </View>
-      )}
-    </TouchableOpacity>
+      );
+    }
+
+    // Discard pile - drag the top card
+    if (displayCard) {
+      return (
+        <View
+          style={[
+            styles.draggingCardContainer,
+            {
+              transform: [
+                { translateX: dragOffset.x },
+                { translateY: dragOffset.y },
+              ],
+            },
+          ]}
+        >
+          <Card
+            card={displayCard}
+            size="medium"
+          />
+        </View>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <PanGestureHandler
+      onGestureEvent={handlePanGesture}
+      onHandlerStateChange={handlePanGesture}
+      enabled={canTap}
+      activeOffsetY={[0, 10]}
+    >
+      <View style={[styles.container, style]}>
+        <TouchableOpacity
+          onPress={handlePress}
+          disabled={!canTap}
+          activeOpacity={0.7}
+          accessibilityLabel={`${label || type} pile${cardCount > 0 ? `, ${cardCount} cards` : ', empty'}${canTap ? ', tap or drag to draw' : ''}`}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canTap }}
+        >
+          <Animated.View
+            style={[
+              styles.pileWrapper,
+              { transform: [{ scale: isDragging ? 1 : pulseAnim }] },
+              glowStyle,
+            ]}
+          >
+            {/* Base stack - static cards underneath */}
+            {renderBaseStack()}
+
+          </Animated.View>
+
+          {label && (
+            <Text style={[styles.label, canTap && styles.labelActive]}>{label}</Text>
+          )}
+
+          {showCount && (
+            <View style={[styles.countBadge, canTap && styles.countBadgeActive]}>
+              <Text style={styles.countText}>{cardCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* Dragging card - follows finger */}
+        {renderDraggingCard()}
+      </View>
+    </PanGestureHandler>
   );
 };
 
@@ -272,20 +392,16 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.accent,
       fontWeight: '600',
     },
-    tapIndicator: {
+    draggingCardContainer: {
       position: 'absolute',
-      bottom: -4,
-      alignSelf: 'center',
-      backgroundColor: colors.success,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 4,
-    },
-    tapText: {
-      fontSize: 9,
-      fontWeight: '800',
-      color: '#FFFFFF',
-      letterSpacing: 0.5,
+      top: 0,
+      left: 5,
+      zIndex: 100,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      elevation: 8,
     },
   });
 

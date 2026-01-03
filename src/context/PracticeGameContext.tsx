@@ -442,13 +442,15 @@ export const PracticeGameProvider: React.FC<PracticeGameProviderProps> = ({ chil
     // Update cumulative scores
     const newScores = updateCumulativeScores(gameState.scores, roundScores);
 
-    // Create round result
+    // Create round result with declared melds and final hands
     const result: RoundResult = {
       winnerId: currentPlayerId,
       winnerName: gameState.players.find(p => p.id === currentPlayerId)?.name || 'Unknown',
       declarationType,
       scores: roundScores,
       timestamp: Date.now(),
+      declaredMelds: melds,
+      finalHands: { ...round.hands },
     };
 
     // Check for eliminations (pool rummy)
@@ -551,6 +553,7 @@ export const PracticeGameProvider: React.FC<PracticeGameProviderProps> = ({ chil
         declarationType: `drop-${dropType}`,
         scores: roundScores,
         timestamp: Date.now(),
+        finalHands: { ...round.hands },
       };
 
       // Check if game should end

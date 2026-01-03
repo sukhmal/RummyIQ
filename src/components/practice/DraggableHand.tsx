@@ -27,7 +27,7 @@ import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import { useTheme } from '../../context/ThemeContext';
 import { Card as CardType } from '../../engine/types';
 import { getMeldType } from '../../engine/meld';
-import { ThemeColors, Spacing, Typography, BorderRadius } from '../../theme';
+import { ThemeColors, Spacing, BorderRadius } from '../../theme';
 import Card from './Card';
 
 interface CardWithMeta extends CardType {
@@ -40,9 +40,11 @@ interface DraggableHandProps {
   onCardPress?: (card: CardType, index: number) => void;
   onCardLongPress?: (card: CardType, index: number) => void;
   onCardsReordered?: (newOrder: CardWithMeta[]) => void;
+  onCardDiscard?: (card: CardType) => void;
   onCardSelect?: (cardIds: string[]) => void;
   selectionMode?: 'single' | 'multiple' | 'none';
   isDisabled?: boolean;
+  canDiscard?: boolean;
   cardSize?: 'small' | 'medium' | 'large';
   style?: ViewStyle;
 }
@@ -52,10 +54,11 @@ const hapticOptions = {
   ignoreAndroidSystemSettings: false,
 };
 
-const MELD_GAP = 24; // Gap between meld groups in pixels (more visible)
-const CARD_OVERLAP = 0.5; // Cards overlap by 50% (half visible)
+const MELD_GAP = 8; // Gap between meld groups (Spacing.sm)
+const CARD_OVERLAP = -30; // Cards within a meld overlap (matching final hands)
+const DISCARD_THRESHOLD = -60; // Drag up this many pixels to discard
 
-// Meld type labels and colors
+// Meld type labels and colors (matching final hands style)
 const MELD_TYPE_INFO: Record<string, { label: string; colorKey: 'success' | 'accent' | 'warning' }> = {
   'pure-sequence': { label: 'Pure', colorKey: 'success' },
   'sequence': { label: 'Seq', colorKey: 'accent' },
@@ -67,9 +70,11 @@ const DraggableHand: React.FC<DraggableHandProps> = ({
   selectedCardIds = [],
   onCardPress,
   onCardsReordered,
+  onCardDiscard,
   onCardSelect,
   selectionMode = 'none',
   isDisabled = false,
+  canDiscard = false,
   cardSize = 'medium',
   style,
 }) => {
@@ -91,9 +96,8 @@ const DraggableHand: React.FC<DraggableHandProps> = ({
 
   // Card dimensions
   const cardWidth = cardSize === 'small' ? 42 : cardSize === 'large' ? 78 : 60;
-  const visibleCardWidth = cardWidth * CARD_OVERLAP; // Half of card is visible
 
-  // Calculate meld info for each group
+  // Calculate meld info for each group (including card count for badge width)
   const meldGroupInfo = useMemo(() => {
     const groups: { [key: number]: CardWithMeta[] } = {};
     cards.forEach(card => {
@@ -104,16 +108,16 @@ const DraggableHand: React.FC<DraggableHandProps> = ({
       }
     });
 
-    const info: { [key: number]: { type: string | null; label: string; colorKey: 'success' | 'accent' | 'warning' | 'tertiaryLabel' } } = {};
+    const info: { [key: number]: { type: string | null; label: string; colorKey: 'success' | 'accent' | 'warning' | 'tertiaryLabel'; cardCount: number } } = {};
     Object.keys(groups).forEach(key => {
       const groupIndex = parseInt(key, 10);
       const groupCards = groups[groupIndex];
       if (groupCards.length >= 3) {
         const meldType = getMeldType(groupCards);
         if (meldType && MELD_TYPE_INFO[meldType]) {
-          info[groupIndex] = { type: meldType, ...MELD_TYPE_INFO[meldType] };
+          info[groupIndex] = { type: meldType, ...MELD_TYPE_INFO[meldType], cardCount: groupCards.length };
         } else {
-          info[groupIndex] = { type: null, label: 'Invalid', colorKey: 'tertiaryLabel' };
+          info[groupIndex] = { type: null, label: 'Invalid', colorKey: 'tertiaryLabel', cardCount: groupCards.length };
         }
       }
     });
@@ -122,11 +126,14 @@ const DraggableHand: React.FC<DraggableHandProps> = ({
 
   // Count meld gaps
   const meldGapsCount = countMeldGaps(cards);
-  const totalGapsWidth = meldGapsCount * MELD_GAP;
+  const totalMeldGapsWidth = meldGapsCount * MELD_GAP;
+  // Cards within melds overlap (negative value reduces width)
+  const cardsWithOverlap = cards.length > 1 ? cards.length - 1 - meldGapsCount : 0;
+  const totalOverlapWidth = cardsWithOverlap * CARD_OVERLAP; // negative value
 
-  // Calculate total content width
+  // Calculate total content width (cards overlap within melds, gaps between melds)
   const contentWidth = cards.length > 0
-    ? visibleCardWidth * (cards.length - 1) + cardWidth + totalGapsWidth
+    ? cardWidth * cards.length + totalOverlapWidth + totalMeldGapsWidth
     : 0;
 
   // Calculate padding for centering
@@ -144,45 +151,50 @@ const DraggableHand: React.FC<DraggableHandProps> = ({
       // Check if next card is in a different meld group
       const currentGroup = cards[i]?.groupIndex;
       const nextGroup = cards[i + 1]?.groupIndex;
-      const hasGapAfter = i < cards.length - 1 &&
-        currentGroup !== undefined &&
-        currentGroup >= 0 &&
-        nextGroup !== undefined &&
-        nextGroup >= 0 &&
-        currentGroup !== nextGroup;
+      const hasMeldGapAfter = i < cards.length - 1 && (
+        (currentGroup !== undefined && currentGroup >= 0 && nextGroup !== undefined && nextGroup >= 0 && currentGroup !== nextGroup) ||
+        (currentGroup !== undefined && currentGroup >= 0 && (nextGroup === undefined || nextGroup < 0)) ||
+        ((currentGroup === undefined || currentGroup < 0) && nextGroup !== undefined && nextGroup >= 0)
+      );
 
-      currentX += visibleCardWidth + (hasGapAfter ? MELD_GAP : 0);
+      // Cards within melds overlap, gaps between melds
+      currentX += cardWidth + (hasMeldGapAfter ? MELD_GAP : CARD_OVERLAP);
     }
 
     return positions;
-  }, [cards, paddingForCenter, visibleCardWidth]);
+  }, [cards, paddingForCenter, cardWidth]);
 
   // Find drop index based on drag position
   const findDropIndex = useCallback((dragX: number, currentIndex: number): number => {
     const positions = cardPositionsRef.current;
     if (positions.length === 0) return currentIndex;
 
-    const currentCardX = positions[currentIndex] + dragX;
+    const currentCardCenter = positions[currentIndex] + dragX + cardWidth / 2;
+    let dropIndex = currentIndex;
 
-    for (let i = 0; i < positions.length; i++) {
-      if (i === currentIndex) continue;
-
-      const targetCenter = positions[i] + cardWidth / 2;
-
-      if (currentIndex < i) {
-        // Dragging right
-        if (currentCardX + cardWidth / 2 > targetCenter) {
-          return i;
+    if (dragX > 0) {
+      // Dragging right - find the rightmost position we've passed
+      for (let i = currentIndex + 1; i < positions.length; i++) {
+        const targetCenter = positions[i] + cardWidth / 2;
+        if (currentCardCenter > targetCenter) {
+          dropIndex = i;
+        } else {
+          break; // Cards are in order, so stop when we haven't passed one
         }
-      } else {
-        // Dragging left
-        if (currentCardX + cardWidth / 2 < targetCenter) {
-          return i;
+      }
+    } else if (dragX < 0) {
+      // Dragging left - find the leftmost position we've passed
+      for (let i = currentIndex - 1; i >= 0; i--) {
+        const targetCenter = positions[i] + cardWidth / 2;
+        if (currentCardCenter < targetCenter) {
+          dropIndex = i;
+        } else {
+          break; // Cards are in order, so stop when we haven't passed one
         }
       }
     }
 
-    return currentIndex;
+    return dropIndex;
   }, [cardWidth]);
 
   const handleCardPress = useCallback((card: CardType, index: number) => {
@@ -228,20 +240,55 @@ const DraggableHand: React.FC<DraggableHandProps> = ({
         }
       }
     } else if (state === State.END || state === State.CANCELLED || state === State.FAILED) {
-      if (state === State.END && draggingIndex !== null && dropTargetIndex !== null && dropTargetIndex !== draggingIndex && onCardsReordered) {
-        const newCards = [...cards];
-        const [removed] = newCards.splice(draggingIndex, 1);
-        // Only clear the moved card's group index, keep others intact
-        const movedCard = { ...removed, groupIndex: -1 };
-        newCards.splice(dropTargetIndex, 0, movedCard);
-        onCardsReordered(newCards);
-        ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
+      if (state === State.END && draggingIndex !== null) {
+        // Check if card was dragged up to discard
+        if (translationY < DISCARD_THRESHOLD && canDiscard && onCardDiscard) {
+          const card = cards[draggingIndex];
+          onCardDiscard(card);
+          ReactNativeHapticFeedback.trigger('notificationSuccess', hapticOptions);
+        } else if (dropTargetIndex !== null && dropTargetIndex !== draggingIndex && onCardsReordered) {
+          // Normal reorder
+          const newCards = [...cards];
+          const [removed] = newCards.splice(draggingIndex, 1);
+
+          // Determine the group index for the moved card based on where it's dropped
+          // Adjust dropTargetIndex since we removed a card
+          const adjustedDropIndex = dropTargetIndex > draggingIndex ? dropTargetIndex - 1 : dropTargetIndex;
+
+          // Check neighboring cards at the drop position to determine if we're dropping into a group
+          const leftNeighbor = adjustedDropIndex > 0 ? newCards[adjustedDropIndex - 1] : null;
+          const rightNeighbor = adjustedDropIndex < newCards.length ? newCards[adjustedDropIndex] : null;
+
+          let newGroupIndex = -1;
+
+          // If both neighbors belong to the same group, join that group
+          if (leftNeighbor?.groupIndex !== undefined && leftNeighbor.groupIndex >= 0 &&
+              rightNeighbor?.groupIndex !== undefined && rightNeighbor.groupIndex >= 0 &&
+              leftNeighbor.groupIndex === rightNeighbor.groupIndex) {
+            newGroupIndex = leftNeighbor.groupIndex;
+          }
+          // If dropping at the end of a group (left neighbor has group, right doesn't or is different)
+          else if (leftNeighbor?.groupIndex !== undefined && leftNeighbor.groupIndex >= 0 &&
+                   (rightNeighbor?.groupIndex === undefined || rightNeighbor.groupIndex !== leftNeighbor.groupIndex)) {
+            newGroupIndex = leftNeighbor.groupIndex;
+          }
+          // If dropping at the start of a group (right neighbor has group, left doesn't or is different)
+          else if (rightNeighbor?.groupIndex !== undefined && rightNeighbor.groupIndex >= 0 &&
+                   (leftNeighbor?.groupIndex === undefined || leftNeighbor.groupIndex !== rightNeighbor.groupIndex)) {
+            newGroupIndex = rightNeighbor.groupIndex;
+          }
+
+          const movedCard = { ...removed, groupIndex: newGroupIndex };
+          newCards.splice(adjustedDropIndex, 0, movedCard);
+          onCardsReordered(newCards);
+          ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
+        }
       }
       setDraggingIndex(null);
       setDragOffset({ x: 0, y: 0 });
       setDropTargetIndex(null);
     }
-  }, [cards, draggingIndex, dropTargetIndex, findDropIndex, getCardPositions, onCardsReordered]);
+  }, [cards, draggingIndex, dropTargetIndex, findDropIndex, getCardPositions, onCardsReordered, canDiscard, onCardDiscard]);
 
   const handleTapStateChange = useCallback((card: CardType, index: number) => (event: TapGestureHandlerStateChangeEvent) => {
     if (event.nativeEvent.state === State.END) {
@@ -271,12 +318,12 @@ const DraggableHand: React.FC<DraggableHandProps> = ({
           const isDragging = draggingIndex === index;
           const isDropTarget = dropTargetIndex === index && draggingIndex !== null && draggingIndex !== index;
 
-          // Check if we need a gap before this card (different meld group than previous)
+          // Check if we need a meld gap before this card (different meld group than previous)
           const prevCard = index > 0 ? cards[index - 1] : null;
           const cardGroup = card.groupIndex ?? -1;
           const prevGroup = prevCard?.groupIndex ?? -1;
-          // Show gap when: both are valid groups and different, OR one is grouped and other is not
-          const showGap = prevCard && (
+          // Show meld gap when: both are valid groups and different, OR one is grouped and other is not
+          const showMeldGap = prevCard && (
             (cardGroup >= 0 && prevGroup >= 0 && cardGroup !== prevGroup) ||
             (cardGroup >= 0 && prevGroup < 0) ||
             (cardGroup < 0 && prevGroup >= 0)
@@ -284,39 +331,38 @@ const DraggableHand: React.FC<DraggableHandProps> = ({
 
           const marginLeft = index === 0
             ? paddingForCenter
-            : showGap
-              ? MELD_GAP - (cardWidth - visibleCardWidth)
-              : -(cardWidth - visibleCardWidth);
+            : showMeldGap
+              ? MELD_GAP
+              : CARD_OVERLAP;
 
-          // Check if this is the last card in a meld group and we should show banner
+          // Check if this is the last card in a meld group and we should show badge
           const groupIdx = card.groupIndex ?? -1;
-          const showMeldBanner = isLastInGroup(index) && groupIdx >= 0;
-          const meldInfo = showMeldBanner ? meldGroupInfo[groupIdx] : null;
+          const showMeldBadge = isLastInGroup(index) && groupIdx >= 0;
+          const meldInfo = showMeldBadge ? meldGroupInfo[groupIdx] : null;
 
           return (
             <PanGestureHandler
               key={card.id}
               onGestureEvent={handlePanGesture(index)}
               onHandlerStateChange={handlePanGesture(index)}
-              enabled={!!onCardsReordered}
+              enabled={!!onCardsReordered || !!onCardDiscard}
               activeOffsetX={[-10, 10]}
-              failOffsetY={[-20, 20]}
+              activeOffsetY={[-10, 10]}
             >
-              <View
-                // eslint-disable-next-line react-native/no-inline-styles
+                <View
                 style={[
                   styles.cardWrapper,
-                  {
-                    marginLeft,
-                    zIndex: isDragging ? 1000 : index,
-                    transform: isDragging ? [
+                  // Dynamic styles for drag behavior - marginLeft for spacing, zIndex/transform for drag feedback
+                  // eslint-disable-next-line react-native/no-inline-styles
+                  { marginLeft, zIndex: isDragging ? 1000 : index },
+                  isDragging && {
+                    transform: [
                       { translateX: dragOffset.x },
                       { translateY: dragOffset.y - 15 },
                       { scale: 1.08 },
-                    ] : isDropTarget ? [
-                      { scale: 0.95 },
-                    ] : [],
+                    ],
                   },
+                  isDropTarget && { transform: [{ scale: 0.95 }] },
                   isDragging && styles.draggingCard,
                 ]}
               >
@@ -331,12 +377,25 @@ const DraggableHand: React.FC<DraggableHandProps> = ({
                       isDisabled={isDisabled && !isDragging}
                       size={cardSize}
                     />
-                    {/* Meld type banner */}
-                    {meldInfo && (
-                      <View style={[styles.meldBanner, { backgroundColor: colors[meldInfo.colorKey as keyof ThemeColors] as string }]}>
-                        <Text style={styles.meldBannerText}>{meldInfo.label}</Text>
-                      </View>
-                    )}
+                    {/* Meld type badge at bottom spanning entire meld (matching final hands style) */}
+                    {meldInfo && (() => {
+                      // Calculate meld width: first card full width + remaining cards with overlap
+                      const meldWidth = cardWidth + (meldInfo.cardCount - 1) * (cardWidth + CARD_OVERLAP);
+                      // Badge extends left from the last card to cover the entire meld
+                      const leftOffset = -(meldWidth - cardWidth);
+                      return (
+                        <View style={[
+                          styles.meldBadgeOverlay,
+                          {
+                            backgroundColor: colors[meldInfo.colorKey as keyof ThemeColors] as string,
+                            width: meldWidth,
+                            left: leftOffset,
+                          },
+                        ]}>
+                          <Text style={styles.meldBadgeText}>{meldInfo.label}</Text>
+                        </View>
+                      );
+                    })()}
                   </View>
                 </TapGestureHandler>
               </View>
@@ -386,19 +445,21 @@ const createStyles = (_colors: ThemeColors) =>
       shadowRadius: 12,
       elevation: 8,
     },
-    meldBanner: {
+    meldBadgeOverlay: {
       position: 'absolute',
-      bottom: -10,
-      right: -2,
-      paddingHorizontal: 4,
-      paddingVertical: 1,
-      borderRadius: BorderRadius.small,
+      bottom: 0,
+      paddingVertical: 3,
+      alignItems: 'center',
+      borderBottomLeftRadius: BorderRadius.small,
+      borderBottomRightRadius: BorderRadius.small,
     },
-    meldBannerText: {
-      ...Typography.caption2,
-      fontSize: 9,
+    meldBadgeText: {
+      fontSize: 10,
       fontWeight: '700',
       color: '#FFFFFF',
+      textShadowColor: 'rgba(0,0,0,0.5)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
     },
   });
 

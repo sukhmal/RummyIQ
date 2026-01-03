@@ -73,6 +73,8 @@ export interface RoundResult {
   declarationType: 'valid' | 'invalid' | 'drop-first' | 'drop-middle';
   scores: { [playerId: string]: number };
   timestamp: number;
+  declaredMelds?: Meld[]; // Melds as declared by the winner (if declaration)
+  finalHands?: { [playerId: string]: Card[] }; // All players' hands at round end
 }
 
 /**

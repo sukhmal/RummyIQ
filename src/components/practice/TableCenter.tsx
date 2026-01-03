@@ -20,6 +20,8 @@ interface TableCenterProps {
   wildJokerCard?: CardType | null;
   onDrawFromDeck?: () => void;
   onDrawFromDiscard?: () => void;
+  onDragDrawFromDeck?: (absoluteX: number) => void;
+  onDragDrawFromDiscard?: (absoluteX: number) => void;
   isDrawPhase?: boolean;
   isHumanTurn?: boolean;
   style?: ViewStyle;
@@ -32,6 +34,8 @@ const TableCenter: React.FC<TableCenterProps> = ({
   wildJokerCard,
   onDrawFromDeck,
   onDrawFromDiscard,
+  onDragDrawFromDeck,
+  onDragDrawFromDiscard,
   isDrawPhase = false,
   isHumanTurn = false,
   style,
@@ -55,6 +59,7 @@ const TableCenter: React.FC<TableCenterProps> = ({
         type="draw"
         cards={drawPile}
         onPress={canDraw ? onDrawFromDeck : undefined}
+        onDragDraw={canDraw ? onDragDrawFromDeck : undefined}
         isDisabled={!canDraw}
         label="Draw"
       />
@@ -66,6 +71,7 @@ const TableCenter: React.FC<TableCenterProps> = ({
         cards={discardPile}
         topCard={topDiscard}
         onPress={canDraw ? onDrawFromDiscard : undefined}
+        onDragDraw={canDraw ? onDragDrawFromDiscard : undefined}
         isDisabled={!canDraw}
         label="Discard"
       />

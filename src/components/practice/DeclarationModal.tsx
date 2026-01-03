@@ -197,15 +197,59 @@ const DeclarationModal: React.FC<DeclarationModalProps> = ({
 
   const handleAutoArrange = useCallback(() => {
     if (!cards || cards.length === 0) return;
+
+    // If already valid, don't change anything
+    if (isValidWithClosingCard) {
+      Alert.alert('Already Valid', 'Your declaration is already valid. No changes needed.');
+      return;
+    }
+
     try {
-      const analysis = autoArrangeHand(cards);
-      setMelds(analysis.melds || []);
-      setDeadwood(analysis.deadwood || []);
+      // Get cards that are already in valid melds (preserve them)
+      const validMeldCards = new Set<string>();
+      const validMeldsToKeep: Meld[] = [];
+
+      for (const meld of melds) {
+        // Check if meld is valid (has 3+ cards and is a valid type)
+        if (meld.cards.length >= 3 && (meld.type === 'pure-sequence' || meld.type === 'sequence' || meld.type === 'set')) {
+          validMeldsToKeep.push(meld);
+          meld.cards.forEach(c => validMeldCards.add(c.id));
+        }
+      }
+
+      // Get cards not in valid melds
+      const cardsToRearrange = cards.filter(c => !validMeldCards.has(c.id));
+
+      if (cardsToRearrange.length === 0) {
+        // All cards are in valid melds, but declaration is still invalid
+        // This means we need sequence requirement - try full rearrange
+        const analysis = autoArrangeHand(cards);
+        setMelds(analysis.melds || []);
+        setDeadwood(analysis.deadwood || []);
+      } else {
+        // Auto-arrange only the unmelded cards
+        const analysis = autoArrangeHand(cardsToRearrange);
+
+        // Combine valid melds with newly arranged ones
+        const allMelds = [...validMeldsToKeep, ...(analysis.melds || [])];
+        const totalMelded = allMelds.reduce((sum, m) => sum + m.cards.length, 0);
+
+        // Check for closing card scenario
+        if (analysis.deadwood?.length === 1 && totalMelded === 13) {
+          setMelds(allMelds);
+          setClosingCard(analysis.deadwood[0]);
+          setDeadwood([]);
+        } else {
+          setMelds(allMelds);
+          setClosingCard(null);
+          setDeadwood(analysis.deadwood || []);
+        }
+      }
       setSelectedMeldIndex(null);
     } catch (error) {
       console.error('Error in handleAutoArrange:', error);
     }
-  }, [cards]);
+  }, [cards, melds, isValidWithClosingCard]);
 
   const handleDeclare = useCallback(() => {
     if (!isValidWithClosingCard) {
@@ -247,7 +291,7 @@ const DeclarationModal: React.FC<DeclarationModalProps> = ({
       transparent
       animationType="fade"
       onRequestClose={onCancel}
-      supportedOrientations={['landscape', 'landscape-left', 'landscape-right']}
+      supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}
     >
       <BlurView style={styles.blurContainer} blurType="dark" blurAmount={10}>
         <View style={styles.modalContainer}>

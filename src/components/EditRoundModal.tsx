@@ -308,7 +308,7 @@ const EditRoundModal: React.FC<EditRoundModalProps> = ({
   if (!round) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="none">
+    <Modal visible={visible} transparent animationType="none" supportedOrientations={['portrait', 'landscape']}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>

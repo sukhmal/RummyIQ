@@ -12,3 +12,5 @@ export { default as DeclarationModal } from './DeclarationModal';
 export { default as PlayerSeat } from './PlayerSeat';
 export { default as TableCenter } from './TableCenter';
 export { default as TableView } from './TableView';
+export { default as DrawAnimation } from './DrawAnimation';
+export { default as BotDeclarationModal } from './BotDeclarationModal';

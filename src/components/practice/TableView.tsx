@@ -29,14 +29,16 @@ interface TableViewProps {
   isHumanTurn: boolean;
   onDrawFromDeck?: () => void;
   onDrawFromDiscard?: () => void;
+  onDragDrawFromDeck?: (absoluteX: number) => void;
+  onDragDrawFromDiscard?: (absoluteX: number) => void;
   style?: ViewStyle;
 }
 
 // Table insets - shrink table from sides, move down
 const TABLE_INSET_LEFT = 100;   // More horizontal shrink
 const TABLE_INSET_RIGHT = 100;
-const TABLE_INSET_TOP = 80;    // Move table down more
-const TABLE_INSET_BOTTOM = 12;
+const TABLE_INSET_TOP = 100;    // Move table down to avoid top player overlap
+const TABLE_INSET_BOTTOM = 8;
 
 // Get player positions around an ellipse (outside the table)
 const getPlayerPositions = (
@@ -47,11 +49,11 @@ const getPlayerPositions = (
 ) => {
   const positions: { x: number; y: number }[] = [];
   const centerX = tableWidth / 2;
-  const centerY = tableHeight / 2 + 34; // Offset to match table position (moved down)
+  const centerY = tableHeight / 2 + 46; // Offset to match table position (moved down)
 
-  // Semi-axes - position avatars just outside table perimeter
-  const a = tableWidth / 2 - 65; // horizontal (close to table edge)
-  const b = tableHeight / 2 - 25; // vertical (close to table edge)
+  // Semi-axes - position avatars outside table perimeter with padding
+  const a = tableWidth / 2 - 45; // horizontal (further from table edge)
+  const b = tableHeight / 2 - 10; // vertical (further from table edge)
 
   for (let i = 0; i < playerCount; i++) {
     // Calculate visual index (human at bottom = 0)
@@ -86,6 +88,8 @@ const TableView: React.FC<TableViewProps> = ({
   isHumanTurn,
   onDrawFromDeck,
   onDrawFromDiscard,
+  onDragDrawFromDeck,
+  onDragDrawFromDiscard,
   style,
 }) => {
   const { colors } = useTheme();
@@ -121,6 +125,8 @@ const TableView: React.FC<TableViewProps> = ({
           wildJokerCard={wildJokerCard}
           onDrawFromDeck={onDrawFromDeck}
           onDrawFromDiscard={onDrawFromDiscard}
+          onDragDrawFromDeck={onDragDrawFromDeck}
+          onDragDrawFromDiscard={onDragDrawFromDiscard}
           isDrawPhase={turnPhase === 'draw'}
           isHumanTurn={isHumanTurn}
         />
