@@ -6,6 +6,7 @@ A mobile scoring app for Indian Rummy that supports all major variants: Pool Rum
 
 ## Features
 
+### Score Tracking Mode
 - **Multiple Game Variants**:
   - Pool Rummy (101/201/250 points or custom limit)
   - Points Rummy
@@ -17,6 +18,21 @@ A mobile scoring app for Indian Rummy that supports all major variants: Pool Rum
 - **Buy-in Tracking**: Configure join table amount and drop penalty for Pool games
 - **Multi-Currency Support**: Choose from 8 global currencies (USD, EUR, GBP, INR, JPY, AUD, CAD, CNY)
 - **Game History**: View complete scoreboard, score progression charts, and round-by-round breakdown
+
+### Practice Mode (Play Against AI Bots)
+- **Interactive Gameplay**: Play actual rummy games against 1-5 AI opponents
+- **Virtual Table**: Landscape view with players positioned around an oval table
+- **Drag-to-Reorder Cards**: Rearrange your hand by dragging cards
+- **Smart Sort**: Automatically group cards into potential melds (pure sequences, sequences, sets)
+- **Meld Grouping**: Select cards and group them into melds with visual gaps between groups
+- **Meld Indicators**: Visual badges show meld types (Pure, Seq, Set, Invalid)
+- **Draw/Discard Actions**: Draw from deck or discard pile, discard selected card
+- **Declaration Flow**: Declare with modal showing card arrangement and validation
+- **Drop Option**: Early drop (25 points) or middle drop (50 points)
+- **Bot AI**: Bots make strategic decisions with realistic timing
+- **Wild Joker Support**: Random card determines wild jokers each round
+
+### General Features
 - **Auto-Save**: Game state persists between sessions
 - **Multiple Themes**: Choose from 5 beautiful themes:
   - Ocean Blue (default)

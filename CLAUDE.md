@@ -31,8 +31,10 @@ npm run lint                      # Run ESLint
 **State Management**: React Context API (`src/context/GameContext.tsx`) with AsyncStorage persistence. The `GameProvider` manages all game state including current game, players, rounds, and scoring.
 
 **Navigation Flow**:
-- Home → GameSetup → Game → History
-- 4 screens in `src/screens/`: HomeScreen, GameSetupScreen, GameScreen, HistoryScreen
+- Score Tracking: Home → GameSetup → Game → History
+- Practice Mode: Home → PracticeSetup → PracticeGame → PracticeHistory
+- Screens in `src/screens/`: HomeScreen, GameSetupScreen, GameScreen, HistoryScreen
+- Practice screens in `src/screens/practice/`: PracticeSetupScreen, PracticeGameScreen, PracticeHistoryScreen
 
 **Key Types** (`src/types/game.ts`):
 - `GameVariant`: 'pool' | 'points' | 'deals'
@@ -47,6 +49,43 @@ npm run lint                      # Run ESLint
 - Deals Rummy: After numberOfDeals, lowest scorer wins
 
 **Data Persistence**: AsyncStorage with key 'currentGame', auto-saved on every state change
+
+## Practice Mode Architecture
+
+**State Management** (`src/context/PracticeGameContext.tsx`): Manages practice game state including players, rounds, hands, deck, discard pile, and bot AI execution. Key functions:
+- `createGame()`: Initialize game with human + bots
+- `drawCard(source)`: Draw from deck or discard pile
+- `discardCard(card)`: Discard selected card
+- `declare(melds)`: Validate and process declaration
+- `drop()`: Early/middle drop with appropriate penalty
+- `executeBotTurn()`: Run AI decision logic for bot players
+
+**Game Engine** (`src/engine/`):
+- `types.ts`: Core types (Card, Meld, PracticePlayer, RoundState, PracticeGameState)
+- `deck.ts`: Deck creation, shuffling (2 decks + printed jokers)
+- `meld.ts`: Meld validation (isValidSet, isValidSequence, isPureSequence, getMeldType)
+- `scoring.ts`: Hand analysis, deadwood calculation, declaration validation
+- `cardSorting.ts`: Smart sort algorithm that groups cards into potential melds
+- `botAI.ts`: Bot decision making (draw source selection, discard choice, declare/drop logic)
+
+**Practice Components** (`src/components/practice/`):
+- `Card.tsx`: Individual card display with suit symbols and selection state
+- `DraggableHand.tsx`: Player's hand with drag-to-reorder, meld gaps, and meld type badges
+- `TableView.tsx`: Oval table with player seats positioned around perimeter
+- `TableCenter.tsx`: Draw pile, discard pile, and wild joker display
+- `PlayerSeat.tsx`: Bot avatar with name, score, card count, and turn indicator
+- `ActionBar.tsx`: Game actions (Draw, Discard, Declare, Drop, Group, Sort)
+- `DeclarationModal.tsx`: Full-screen modal for arranging melds and declaring
+
+**Indian Rummy Rules Implemented**:
+- 13 cards per player, 14th card drawn then discarded each turn
+- Valid declaration requires: 2+ sequences (at least 1 pure), remaining cards in valid melds
+- Pure sequence: 3+ consecutive cards of same suit without jokers (wild cards in natural position allowed)
+- Sequence: 3+ consecutive cards of same suit (jokers allowed)
+- Set: 3-4 cards of same rank, different suits (jokers allowed)
+- Wild joker: All cards matching the rank of the cut card
+- Drop penalties: 25 points (before first draw), 50 points (after drawing)
+- Invalid declaration: 80 points penalty
 
 ## Theming System
 
