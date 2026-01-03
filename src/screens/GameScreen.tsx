@@ -503,7 +503,7 @@ const GameScreen = ({ navigation }: any) => {
                   <View style={styles.rejoinHint}>
                     <Icon name="exclamationmark.triangle.fill" size={IconSize.small} color={colors.warning} weight="medium" />
                     <Text style={styles.rejoinHintText}>
-                      Cannot rejoin while a player is in compulsory play
+                      Cannot rejoin: scores are too high
                     </Text>
                   </View>
                 )}

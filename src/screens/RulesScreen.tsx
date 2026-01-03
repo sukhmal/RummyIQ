@@ -102,6 +102,7 @@ const RULES_DATA: RuleSection[] = [
       'Only available in Pool Rummy.',
       'Eliminated players can rejoin when no active player is in compulsory play.',
       'Rejoin score = Highest active player score + 1',
+      'Rejoin is blocked if this score would put the player in compulsory play.',
       'Rejoining player is seated to the left of the current dealer.',
       'Players can rejoin multiple times (if eligible).',
     ],
