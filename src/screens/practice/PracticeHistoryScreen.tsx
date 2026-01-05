@@ -17,9 +17,10 @@ import { useNavigation } from '@react-navigation/native';
 import Orientation from 'react-native-orientation-locker';
 import { useTheme } from '../../context/ThemeContext';
 import { usePracticeGame } from '../../context/PracticeGameContext';
-import { ThemeColors, Typography, Spacing, BorderRadius, IconSize } from '../../theme';
+import { ThemeColors, Typography, Spacing, BorderRadius } from '../../theme';
 import Icon from '../../components/Icon';
 import { Card } from '../../components/practice';
+import { GameInfoBadges, WinnerBanner, PrimaryButton, ScreenFooter } from '../../components/shared';
 import { autoArrangeHand } from '../../engine/declaration';
 import { Meld, Card as CardType } from '../../engine/types';
 
@@ -121,12 +122,19 @@ const PracticeHistoryScreen = () => {
     return scoreA - scoreB;
   });
 
+  const winnerName = gameState.winner
+    ? (gameState.winner.id === 'human' ? 'You' : gameState.winner.name)
+    : null;
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* Winner Banner */}
+        {winnerName && <WinnerBanner winnerName={winnerName} />}
+
         {/* Final Hands - Show all players' melds */}
         {Object.keys(arrangedHands).length > 0 && (
           <View style={styles.section}>
@@ -246,40 +254,35 @@ const PracticeHistoryScreen = () => {
         {/* Game Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Game Info</Text>
-          <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Variant</Text>
-              <Text style={styles.infoValue}>{gameState.config.variant.toUpperCase()}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Rounds Played</Text>
-              <Text style={styles.infoValue}>{gameState.roundResults.length}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Players</Text>
-              <Text style={styles.infoValue}>{gameState.players.length}</Text>
-            </View>
-          </View>
+          <GameInfoBadges
+            variant={gameState.config.variant}
+            poolLimit={gameState.config.poolLimit}
+            numberOfDeals={gameState.config.numberOfDeals}
+            roundCount={gameState.roundResults.length}
+            playerCount={gameState.players.length}
+          />
         </View>
       </ScrollView>
 
       {/* Footer Actions */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.secondaryButton}
+      <ScreenFooter direction="row">
+        <PrimaryButton
+          label="Home"
+          icon="house.fill"
           onPress={handleGoHome}
-        >
-          <Icon name="house.fill" size={IconSize.medium} color={colors.accent} />
-          <Text style={[styles.buttonText, { color: colors.accent }]}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.primaryButton}
+          variant="outlined"
+          size="compact"
+          flex
+        />
+        <PrimaryButton
+          label="Play Again"
+          icon="arrow.counterclockwise"
           onPress={handlePlayAgain}
-        >
-          <Icon name="arrow.counterclockwise" size={IconSize.medium} color="#FFFFFF" />
-          <Text style={styles.primaryButtonText}>Play Again</Text>
-        </TouchableOpacity>
-      </View>
+          color="success"
+          size="compact"
+          flex
+        />
+      </ScreenFooter>
     </SafeAreaView>
   );
 };
@@ -461,66 +464,6 @@ const createStyles = (colors: ThemeColors) =>
     },
     zeroScore: {
       color: colors.success,
-    },
-    infoCard: {
-      backgroundColor: colors.cardBackground,
-      borderRadius: BorderRadius.medium,
-      padding: Spacing.md,
-      borderWidth: 1,
-      borderColor: colors.separator,
-    },
-    infoRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: Spacing.xs,
-    },
-    infoLabel: {
-      ...Typography.body,
-      color: colors.secondaryLabel,
-    },
-    infoValue: {
-      ...Typography.body,
-      color: colors.label,
-      fontWeight: '600',
-    },
-    footer: {
-      flexDirection: 'row',
-      padding: Spacing.md,
-      gap: Spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: colors.separator,
-      backgroundColor: colors.cardBackground,
-    },
-    secondaryButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: Spacing.md,
-      borderRadius: BorderRadius.medium,
-      borderWidth: 1,
-      borderColor: colors.accent,
-      gap: Spacing.xs,
-    },
-    primaryButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: Spacing.md,
-      borderRadius: BorderRadius.medium,
-      backgroundColor: colors.success,
-      gap: Spacing.xs,
-    },
-    buttonText: {
-      ...Typography.body,
-      fontWeight: '600',
-    },
-    primaryButtonText: {
-      ...Typography.body,
-      fontWeight: '600',
-      color: '#FFFFFF',
     },
   });
 

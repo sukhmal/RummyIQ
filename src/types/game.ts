@@ -1,4 +1,7 @@
-export type GameVariant = 'pool' | 'points' | 'deals';
+import { GameVariant, BaseGameConfig, BasePlayer } from './shared';
+
+// Re-export shared types for backward compatibility
+export type { GameVariant };
 
 export type PoolType = number;
 
@@ -21,9 +24,7 @@ export const CURRENCIES: Currency[] = [
   { code: 'CNY', symbol: '¥', name: 'Chinese Yuan' },
 ];
 
-export interface Player {
-  id: string;
-  name: string;
+export interface Player extends BasePlayer {
   score: number;
   isEliminated?: boolean;
   rejoinCount?: number;
@@ -36,13 +37,8 @@ export interface Round {
   winner?: string;
 }
 
-export interface GameConfig {
-  variant: GameVariant;
+export interface GameConfig extends BaseGameConfig {
   poolLimit?: PoolType;
-  pointValue?: number;
-  numberOfDeals?: number;
-  firstDropPenalty?: number;
-  middleDropPenalty?: number;
   joinTableAmount?: number;
 }
 

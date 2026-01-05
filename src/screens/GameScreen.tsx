@@ -20,6 +20,7 @@ import FireworksModal from '../components/FireworksModal';
 import ConfirmationDialog from '../components/ConfirmationDialog';
 import SplitPotModal from '../components/SplitPotModal';
 import Icon from '../components/Icon';
+import { getGameTypeLabel } from '../utils/formatters';
 import { ThemeColors, Typography, Spacing, TapTargets, IconSize, BorderRadius } from '../theme';
 
 // States: 0 = default (25 drop), 1 = winner (0), 2 = custom score, 3 = invalid declaration (80)
@@ -246,15 +247,6 @@ const GameScreen = ({ navigation }: any) => {
   const eliminatedPlayers = currentGame.players.filter(p => p.isEliminated);
   const rejoinEnabled = canPlayersRejoin();
 
-  const getGameTypeLabel = () => {
-    if (currentGame.config.variant === 'pool') {
-      return `Pool ${currentGame.config.poolLimit}`;
-    } else if (currentGame.config.variant === 'deals') {
-      return `Deal ${currentGame.currentDeal}/${currentGame.config.numberOfDeals}`;
-    }
-    return 'Points';
-  };
-
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <SafeAreaView
@@ -287,7 +279,7 @@ const GameScreen = ({ navigation }: any) => {
                   color={colors.accent}
                   weight="medium"
                 />
-                <Text style={styles.infoBadgeText}>{getGameTypeLabel()}</Text>
+                <Text style={styles.infoBadgeText}>{getGameTypeLabel(currentGame.config.variant, currentGame.config.poolLimit, currentGame.config.numberOfDeals, currentGame.currentDeal)}</Text>
               </View>
               <View style={styles.infoBadge}>
                 <Icon name="arrow.trianglehead.2.clockwise.rotate.90" size={IconSize.small} color={colors.accent} weight="medium" />

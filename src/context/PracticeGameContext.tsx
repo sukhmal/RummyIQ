@@ -463,7 +463,7 @@ export const PracticeGameProvider: React.FC<PracticeGameProviderProps> = ({ chil
     const gameEnded = shouldGameEnd(
       gameState.players,
       newScores,
-      [...gameState.roundResults, result],
+      gameState.roundResults.length + 1,
       gameState.config.variant,
       gameState.config.numberOfDeals,
       poolLimit
@@ -560,7 +560,7 @@ export const PracticeGameProvider: React.FC<PracticeGameProviderProps> = ({ chil
       const gameEnded = shouldGameEnd(
         gameState.players,
         newScores,
-        [...gameState.roundResults, result],
+        gameState.roundResults.length + 1,
         gameState.config.variant,
         gameState.config.numberOfDeals,
         poolLimit

@@ -36,17 +36,29 @@ npm run lint                      # Run ESLint
 - Screens in `src/screens/`: HomeScreen, GameSetupScreen, GameScreen, HistoryScreen
 - Practice screens in `src/screens/practice/`: PracticeSetupScreen, PracticeGameScreen, PracticeHistoryScreen
 
-**Key Types** (`src/types/game.ts`):
-- `GameVariant`: 'pool' | 'points' | 'deals'
+**Shared Types** (`src/types/shared.ts`):
+- `GameVariant`: 'pool' | 'points' | 'deals' - single source of truth for both modes
+- `BaseGameConfig`: Common configuration interface (variant, poolLimit, numberOfDeals, etc.)
+- `BasePlayer`: Common player interface (id, name)
+- Constants: `DEFAULT_POOL_LIMIT`, `DEFAULT_FIRST_DROP`, `DEFAULT_MIDDLE_DROP`, `MAX_ROUND_POINTS`
+
+**Scorer Types** (`src/types/game.ts`):
 - `Game`: Complete game state (players, rounds, config, winner)
-- `Player`: name, score, isEliminated
+- `Player`: Extends `BasePlayer` with score, isEliminated, rejoinCount
+- `GameConfig`: Extends `BaseGameConfig` with joinTableAmount
 - `Round`: scores per player, round winner, timestamp
 
-**Scoring Logic** (in GameContext):
-- Invalid declaration: 80 points (pool) or entered value (other variants)
-- Declared winner: 0 points
-- Pool Rummy: Players eliminated at poolLimit, last remaining wins
-- Deals Rummy: After numberOfDeals, lowest scorer wins
+**Practice Types** (`src/engine/types.ts`):
+- `PracticePlayer`: Extends `BasePlayer` with isBot, difficulty, avatar
+- `PracticeGameConfig`: Extends `BaseGameConfig` with invalidDeclarationPenalty
+
+**Scoring Logic** (unified in `src/engine/scoring.ts`):
+- `calculateSimpleScore()`: Score calculation for scorer mode (manual entry)
+- `isPlayerEliminated()`: Check if player exceeds pool limit
+- `isInCompulsoryPlay()`: Check if player can't afford to drop
+- `shouldGameEnd()`: Generic game end detection for all variants
+- `determineGameWinner()`: Generic winner determination
+- All functions use generics (`<P extends BasePlayer>`) to work with both Player and PracticePlayer types
 
 **Data Persistence**: AsyncStorage with key 'currentGame', auto-saved on every state change
 
@@ -76,6 +88,23 @@ npm run lint                      # Run ESLint
 - `PlayerSeat.tsx`: Bot avatar with name, score, card count, and turn indicator
 - `ActionBar.tsx`: Game actions (Draw, Discard, Declare, Drop, Group, Sort)
 - `DeclarationModal.tsx`: Full-screen modal for arranging melds and declaring
+
+**Shared Components** (`src/components/shared/`):
+Reusable components used by both Scorer and Practice modes:
+- `VariantSelector`: Game type selection (pool/points/deals) - supports segmented and radio styles
+- `PoolLimitSelector`: Pool limit configuration with 101/201/250 presets and optional custom input
+- `NumberSelector`: Segmented number picker for bot count, number of deals, etc.
+- `NumberInputField`: Labeled numeric input with optional icon, prefix, and suffix
+- `WinnerBanner`: Trophy banner showing game winner
+- `GameInfoBadges`: Row of badges showing game variant, rounds, players
+- `Leaderboard`: Player rankings with scores, wins, and rank badges (gold/silver/bronze)
+- `PrimaryButton`: Reusable button with icon, disabled state, and variant/color options
+
+**Shared Utilities** (`src/utils/`):
+Common formatting functions used across both modes:
+- `formatDate()`: Format date for display (e.g., "Jan 15")
+- `getGameTypeLabel()`: Get display label for game type (e.g., "Pool 101", "2 Deals")
+- `getGameSummary()`: Get summary of a completed game (winner, variant, players, rounds)
 
 **Indian Rummy Rules Implemented**:
 - 13 cards per player, 14th card drawn then discarded each turn

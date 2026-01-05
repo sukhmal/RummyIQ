@@ -9,9 +9,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
-import { Game } from '../types/game';
 import Icon from '../components/Icon';
 import SettingsModal from '../components/SettingsModal';
+import { formatDate, getGameSummary } from '../utils/formatters';
 import { ThemeColors, Typography, Spacing, TapTargets, IconSize, BorderRadius } from '../theme';
 
 const HomeScreen = ({ navigation }: any) => {
@@ -23,29 +23,6 @@ const HomeScreen = ({ navigation }: any) => {
   useEffect(() => {
     loadGame();
   }, [loadGame]);
-
-  const formatDate = (date: Date | string) => {
-    const d = new Date(date);
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  const getGameSummary = (game: Game) => {
-    const winnerPlayer = game.players.find(p => p.id === game.winner);
-    const variant = game.config.variant === 'pool'
-      ? `Pool ${game.config.poolLimit}`
-      : game.config.variant === 'deals'
-      ? `Deals ${game.config.numberOfDeals}`
-      : 'Points';
-    return {
-      winner: winnerPlayer?.name || 'Unknown',
-      variant,
-      players: game.players.length,
-      rounds: game.rounds.length,
-    };
-  };
 
   return (
     <SafeAreaView style={styles.container}>

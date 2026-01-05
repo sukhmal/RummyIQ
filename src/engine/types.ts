@@ -2,6 +2,16 @@
  * Core types for the Rummy game engine
  */
 
+import {
+  GameVariant,
+  BaseGameConfig,
+  BasePlayer,
+} from '../types/shared';
+
+// Re-export shared types
+export type { GameVariant };
+export type PracticeVariant = GameVariant; // Alias for backward compatibility
+
 // Card suits
 export type Suit = 'hearts' | 'diamonds' | 'clubs' | 'spades';
 
@@ -56,9 +66,7 @@ export type BotDifficulty = 'easy' | 'medium' | 'hard';
 /**
  * A player in the practice game
  */
-export interface PracticePlayer {
-  id: string;
-  name: string;
+export interface PracticePlayer extends BasePlayer {
   isBot: boolean;
   difficulty?: BotDifficulty;
   avatar?: string;
@@ -78,18 +86,9 @@ export interface RoundResult {
 }
 
 /**
- * Game variants supported in practice mode
- */
-export type PracticeVariant = 'pool' | 'points' | 'deals';
-
-/**
  * Configuration for a practice game
  */
-export interface PracticeGameConfig {
-  variant: PracticeVariant;
-  poolLimit?: number; // For pool rummy (e.g., 101, 201, 250)
-  numberOfDeals?: number; // For deals rummy
-  pointValue?: number; // For points rummy
+export interface PracticeGameConfig extends BaseGameConfig {
   firstDropPenalty: number;
   middleDropPenalty: number;
   invalidDeclarationPenalty: number;
@@ -203,6 +202,6 @@ export const getRankIndex = (rank: Rank, aceHigh = false): number => {
 };
 
 /**
- * Default pool limit
+ * Default pool limit for practice mode
  */
 export const DEFAULT_POOL_LIMIT = 201;

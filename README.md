@@ -42,6 +42,26 @@ A mobile scoring app for Indian Rummy that supports all major variants: Pool Rum
   - Royal Purple
 - **Apple HIG Compliant**: Native iOS controls and SF Symbols throughout
 
+## Architecture
+
+### Shared Components
+
+The app uses shared components between Scorer and Practice modes to reduce duplication:
+
+**Location**: `src/components/shared/`
+
+| Component | Purpose |
+|-----------|---------|
+| `VariantSelector` | Game type selection (pool/points/deals) |
+| `PoolLimitSelector` | Pool limit configuration with presets |
+| `NumberSelector` | Segmented number picker |
+| `NumberInputField` | Labeled numeric input with icon/prefix/suffix |
+| `WinnerBanner` | Victory display banner |
+| `GameInfoBadges` | Game metadata badges (variant, rounds, etc.) |
+| `Leaderboard` | Player rankings with scores and wins |
+
+**Shared Types**: `src/types/shared.ts` defines common interfaces (`GameVariant`, `BaseGameConfig`, `BasePlayer`) used by both modes.
+
 ## Getting Started
 
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.

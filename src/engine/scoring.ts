@@ -5,25 +5,58 @@
 import {
   Card,
   PracticeGameState,
-  PracticePlayer,
-  RoundResult,
   PracticeVariant,
   DEFAULT_POOL_LIMIT,
 } from './types';
 import { calculateDeadwoodPoints } from './hand';
 import { autoArrangeHand } from './declaration';
+import {
+  GameVariant,
+  BasePlayer,
+  MAX_ROUND_POINTS,
+  DEFAULT_FIRST_DROP,
+  DEFAULT_MIDDLE_DROP,
+} from '../types/shared';
+
+// Re-export for backward compatibility
+export { MAX_ROUND_POINTS, DEFAULT_FIRST_DROP, DEFAULT_MIDDLE_DROP };
 
 /**
- * Maximum points a player can get in a single round
+ * Default invalid declaration penalty (same as MAX_ROUND_POINTS)
  */
-export const MAX_ROUND_POINTS = 80;
+export const DEFAULT_INVALID_DECLARATION = MAX_ROUND_POINTS;
 
 /**
- * Default penalties
+ * Calculate score for scorer mode (simple input-based)
+ * Used when scores are entered manually, not calculated from cards
  */
-export const DEFAULT_FIRST_DROP = 25;
-export const DEFAULT_MIDDLE_DROP = 50;
-export const DEFAULT_INVALID_DECLARATION = 80;
+export const calculateSimpleScore = (
+  points: number,
+  isDeclared: boolean,
+  hasInvalidDeclaration: boolean,
+  variant: GameVariant
+): number => {
+  if (hasInvalidDeclaration) {
+    return variant === 'pool' ? MAX_ROUND_POINTS : points;
+  }
+  if (isDeclared) {
+    return 0;
+  }
+  return points;
+};
+
+/**
+ * Check if player is in compulsory play (can't afford to drop)
+ * Used by both scorer and practice modes
+ */
+export const isInCompulsoryPlay = (
+  score: number,
+  poolLimit: number,
+  firstDropPenalty: number
+): boolean => {
+  const spaceLeft = poolLimit - score;
+  return spaceLeft < firstDropPenalty;
+};
 
 /**
  * Calculate points for a player's hand at end of round
@@ -161,7 +194,7 @@ export const updateCumulativeScores = (
  */
 export const isPlayerEliminated = (
   score: number,
-  variant: PracticeVariant,
+  variant: GameVariant,
   poolLimit?: number
 ): boolean => {
   if (variant !== 'pool') return false;
@@ -172,12 +205,12 @@ export const isPlayerEliminated = (
 /**
  * Get active players (not eliminated) for pool rummy
  */
-export const getActivePlayers = (
-  players: PracticePlayer[],
+export const getActivePlayers = <P extends BasePlayer>(
+  players: P[],
   scores: { [playerId: string]: number },
-  variant: PracticeVariant,
+  variant: GameVariant,
   poolLimit?: number
-): PracticePlayer[] => {
+): P[] => {
   if (variant !== 'pool') {
     return players;
   }
@@ -188,11 +221,11 @@ export const getActivePlayers = (
 /**
  * Check if game should end
  */
-export const shouldGameEnd = (
-  players: PracticePlayer[],
+export const shouldGameEnd = <P extends BasePlayer>(
+  players: P[],
   scores: { [playerId: string]: number },
-  roundResults: RoundResult[],
-  variant: PracticeVariant,
+  roundCount: number,
+  variant: GameVariant,
   numberOfDeals?: number,
   poolLimit?: number
 ): boolean => {
@@ -204,12 +237,12 @@ export const shouldGameEnd = (
 
   if (variant === 'deals' && numberOfDeals) {
     // Deals rummy: game ends after fixed number of deals
-    return roundResults.length >= numberOfDeals;
+    return roundCount >= numberOfDeals;
   }
 
   if (variant === 'points') {
     // Points rummy: game ends after 1 round
-    return roundResults.length >= 1;
+    return roundCount >= 1;
   }
 
   return false;
@@ -218,12 +251,12 @@ export const shouldGameEnd = (
 /**
  * Determine the winner of the game
  */
-export const determineGameWinner = (
-  players: PracticePlayer[],
+export const determineGameWinner = <P extends BasePlayer>(
+  players: P[],
   scores: { [playerId: string]: number },
-  variant: PracticeVariant,
+  variant: GameVariant,
   poolLimit?: number
-): PracticePlayer | null => {
+): P | null => {
   if (variant === 'pool') {
     // Pool rummy: last remaining player wins
     const activePlayers = getActivePlayers(players, scores, variant, poolLimit);
@@ -232,7 +265,7 @@ export const determineGameWinner = (
 
   if (variant === 'deals' || variant === 'points') {
     // Lowest score wins
-    let winner: PracticePlayer | null = null;
+    let winner: P | null = null;
     let lowestScore = Infinity;
 
     for (const player of players) {
@@ -278,10 +311,10 @@ export const formatScore = (score: number): string => {
 /**
  * Get player rank based on scores
  */
-export const getPlayerRanks = (
-  players: PracticePlayer[],
+export const getPlayerRanks = <P extends BasePlayer>(
+  players: P[],
   scores: { [playerId: string]: number },
-  variant: PracticeVariant,
+  variant: GameVariant,
   poolLimit?: number
 ): { playerId: string; rank: number; score: number }[] => {
   const sortedPlayers = [...players].sort((a, b) => {

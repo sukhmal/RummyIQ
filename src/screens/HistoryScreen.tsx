@@ -14,7 +14,8 @@ import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
 import Icon from '../components/Icon';
 import EditRoundModal from '../components/EditRoundModal';
-import { ThemeColors, Typography, Spacing, TapTargets, IconSize, BorderRadius } from '../theme';
+import { WinnerBanner, GameInfoBadges, Leaderboard, LeaderboardPlayer, PrimaryButton, SectionHeader } from '../components/shared';
+import { ThemeColors, Typography, Spacing, IconSize, BorderRadius } from '../theme';
 import { Round } from '../types/game';
 
 const screenWidth = Dimensions.get('window').width;
@@ -105,15 +106,6 @@ const HistoryScreen = ({ navigation, route }: any) => {
 
   const chartData = getChartData();
 
-  const getGameTypeLabel = () => {
-    if (displayGame.config.variant === 'pool') {
-      return `Pool ${displayGame.config.poolLimit}`;
-    } else if (displayGame.config.variant === 'deals') {
-      return `${displayGame.config.numberOfDeals} Deals`;
-    }
-    return 'Points';
-  };
-
   return (
     <SafeAreaView
       style={styles.container}
@@ -126,48 +118,22 @@ const HistoryScreen = ({ navigation, route }: any) => {
 
         {/* Winner Banner */}
         {winner && (
-          <View style={styles.winnerBanner}>
-            <View style={styles.winnerIconContainer}>
-              <Icon name="trophy.fill" size={36} color={colors.gold} weight="medium" />
-            </View>
-            <View style={styles.winnerContent}>
-              <Text style={styles.winnerLabel}>Winner</Text>
-              <Text style={styles.winnerName}>{winner.name}</Text>
-            </View>
-          </View>
+          <WinnerBanner winnerName={winner.name} />
         )}
 
         {/* Game Info Badges */}
-        <View style={styles.gameInfoSection}>
-          <View style={styles.gameInfoRow}>
-            {displayGame.name && (
-              <View style={styles.infoBadge}>
-                <Icon name="tag.fill" size={IconSize.small} color={colors.accent} weight="medium" />
-                <Text style={styles.infoBadgeText}>{displayGame.name}</Text>
-              </View>
-            )}
-            <View style={styles.infoBadge}>
-              <Icon
-                name={displayGame.config.variant === 'pool' ? 'person.3.fill' : displayGame.config.variant === 'deals' ? 'square.stack.fill' : 'star.fill'}
-                size={IconSize.small}
-                color={colors.accent}
-                weight="medium"
-              />
-              <Text style={styles.infoBadgeText}>{getGameTypeLabel()}</Text>
-            </View>
-            <View style={styles.infoBadge}>
-              <Icon name="arrow.trianglehead.2.clockwise.rotate.90" size={IconSize.small} color={colors.accent} weight="medium" />
-              <Text style={styles.infoBadgeText}>{displayGame.rounds.length} rounds</Text>
-            </View>
-          </View>
-        </View>
+        <GameInfoBadges
+          gameName={displayGame.name}
+          variant={displayGame.config.variant}
+          poolLimit={displayGame.config.poolLimit}
+          numberOfDeals={displayGame.config.numberOfDeals}
+          roundCount={displayGame.rounds.length}
+        />
 
         {/* Score Progression Chart */}
         {chartData && (
           <View style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionLabel}>SCORE PROGRESSION</Text>
-            </View>
+            <SectionHeader label="SCORE PROGRESSION" />
             <View style={styles.chartCard}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <LineChart
@@ -210,98 +176,35 @@ const HistoryScreen = ({ navigation, route }: any) => {
 
         {/* Leaderboard */}
         <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionLabel}>LEADERBOARD</Text>
-            <TouchableOpacity
-              style={styles.sortToggle}
-              onPress={() => setSortByScore(!sortByScore)}
-              accessibilityLabel={sortByScore ? 'Show original order' : 'Sort by score'}
-              accessibilityRole="button">
-              <Icon
-                name={sortByScore ? 'arrow.up.arrow.down.circle.fill' : 'arrow.up.arrow.down.circle'}
-                size={IconSize.medium}
-                color={sortByScore ? colors.tint : colors.tertiaryLabel}
-                weight="medium"
-              />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.card}>
-            {/* Table Header */}
-            <View style={styles.tableHeader}>
-              <Text style={[styles.headerCell, styles.rankColumn]}>#</Text>
-              <Text style={[styles.headerCell, styles.nameColumn]}>Player</Text>
-              <Text style={[styles.headerCell, styles.scoreColumn]}>Score</Text>
-              <Text style={[styles.headerCell, styles.winsColumn]}>Wins</Text>
-            </View>
-
-            {/* Player Rows */}
-            {leaderboardPlayers.map((player, index) => {
-              const isLast = index === leaderboardPlayers.length - 1;
-              const isWinner = player.id === displayGame.winner;
-              return (
-                <View
-                  key={player.id}
-                  style={[
-                    styles.leaderboardRow,
-                    !isLast && styles.leaderboardRowBorder,
-                    player.isEliminated && styles.eliminatedRow,
-                  ]}>
-                  <View style={[styles.rankColumn, styles.rankContainer]}>
-                    {sortByScore && index === 0 && !player.isEliminated ? (
-                      <View style={styles.rankBadgeGold}>
-                        <Text style={styles.rankBadgeText}>1</Text>
-                      </View>
-                    ) : sortByScore && index === 1 && !player.isEliminated ? (
-                      <View style={styles.rankBadgeSilver}>
-                        <Text style={styles.rankBadgeText}>{index + 1}</Text>
-                      </View>
-                    ) : sortByScore && index === 2 && !player.isEliminated ? (
-                      <View style={styles.rankBadgeBronze}>
-                        <Text style={styles.rankBadgeText}>{index + 1}</Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.rankText}>{index + 1}</Text>
-                    )}
-                  </View>
-                  <View style={styles.nameColumn}>
-                    <Text
-                      style={[
-                        styles.playerName,
-                        player.isEliminated && styles.eliminatedText,
-                        isWinner && styles.winnerTextStyle,
-                      ]}
-                      numberOfLines={1}>
-                      {player.name}
-                    </Text>
-                    {player.isEliminated && (
-                      <Text style={styles.eliminatedLabel}>Eliminated</Text>
-                    )}
-                  </View>
-                  <View style={styles.scoreColumn}>
-                    <Text style={[styles.scoreText, player.isEliminated && styles.eliminatedText]}>
-                      {player.score}
-                    </Text>
-                  </View>
-                  <View style={styles.winsColumn}>
-                    <View style={styles.winsBadge}>
-                      <Text style={styles.winsText}>{getPlayerWins(player.id)}</Text>
-                    </View>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
+          <SectionHeader
+            label="LEADERBOARD"
+            action={{
+              icon: 'arrow.up.arrow.down.circle',
+              iconFilled: 'arrow.up.arrow.down.circle.fill',
+              isActive: sortByScore,
+              onPress: () => setSortByScore(!sortByScore),
+              accessibilityLabel: sortByScore ? 'Show original order' : 'Sort by score',
+            }}
+          />
+          <Leaderboard
+            players={leaderboardPlayers.map((player): LeaderboardPlayer => ({
+              id: player.id,
+              name: player.name,
+              score: player.score,
+              wins: getPlayerWins(player.id),
+              isWinner: player.id === displayGame.winner,
+              isEliminated: player.isEliminated,
+            }))}
+            showRanks={sortByScore}
+            showWins={true}
+            winnerId={displayGame.winner || undefined}
+          />
         </View>
 
         {/* Round History */}
         {displayGame.rounds.length > 0 && (
           <View style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionLabel}>ROUND HISTORY</Text>
-              <View style={styles.roundHistoryBadge}>
-                <Text style={styles.roundHistoryBadgeText}>{displayGame.rounds.length}</Text>
-              </View>
-            </View>
+            <SectionHeader label="ROUND HISTORY" badge={displayGame.rounds.length} />
 
             {[...displayGame.rounds].reverse().map((round, index) => {
               const roundNumber = displayGame.rounds.length - index;
@@ -370,23 +273,17 @@ const HistoryScreen = ({ navigation, route }: any) => {
         {/* Action Buttons */}
         <View style={styles.actionSection}>
           {viewingHistoricalGame ? (
-            <TouchableOpacity
-              style={styles.primaryButton}
+            <PrimaryButton
+              label="Back to Home"
+              icon="house.fill"
               onPress={() => navigation.navigate('Home')}
-              accessibilityLabel="Back to home"
-              accessibilityRole="button">
-              <Icon name="house.fill" size={IconSize.medium} color={colors.label} weight="medium" />
-              <Text style={styles.primaryButtonText}>Back to Home</Text>
-            </TouchableOpacity>
+            />
           ) : !winner ? (
-            <TouchableOpacity
-              style={styles.primaryButton}
+            <PrimaryButton
+              label="Continue Game"
+              icon="play.fill"
               onPress={() => navigation.goBack()}
-              accessibilityLabel="Continue game"
-              accessibilityRole="button">
-              <Icon name="play.fill" size={IconSize.medium} color={colors.label} weight="medium" />
-              <Text style={styles.primaryButtonText}>Continue Game</Text>
-            </TouchableOpacity>
+            />
           ) : null}
         </View>
       </ScrollView>
@@ -416,87 +313,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingBottom: Spacing.xxl,
   },
 
-  // Winner Banner
-  winnerBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gold + '15',
-    borderWidth: 2,
-    borderColor: colors.gold,
-    borderRadius: BorderRadius.large,
-    padding: Spacing.lg,
-    marginBottom: Spacing.lg,
-    gap: Spacing.md,
-  },
-  winnerIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.gold + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  winnerContent: {
-    flex: 1,
-  },
-  winnerLabel: {
-    ...Typography.caption1,
-    color: colors.gold,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 2,
-  },
-  winnerName: {
-    ...Typography.title1,
-    color: colors.label,
-  },
-
-  // Game Info Badges
-  gameInfoSection: {
-    marginBottom: Spacing.lg,
-  },
-  gameInfoRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-  },
-  infoBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.accent + '20',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.large,
-    gap: Spacing.sm,
-  },
-  infoBadgeText: {
-    ...Typography.subheadline,
-    fontWeight: '600',
-    color: colors.accent,
-  },
-
   // Section Styles
   section: {
     marginBottom: Spacing.lg,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-    marginLeft: Spacing.xs,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.secondaryLabel,
-    letterSpacing: 0.5,
-  },
-  sortToggle: {
-    padding: Spacing.xs,
-    marginRight: Spacing.xs,
   },
 
   // Chart Card
@@ -530,151 +349,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.secondaryLabel,
   },
 
-  // Card Styles
-  card: {
-    backgroundColor: colors.cardBackground,
-    borderRadius: BorderRadius.large,
-    overflow: 'hidden',
-  },
-
-  // Table Header
-  tableHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.separator,
-    backgroundColor: colors.background,
-  },
-  headerCell: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.tertiaryLabel,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-
-  // Column Definitions
-  rankColumn: {
-    width: 44,
-    alignItems: 'center',
-  },
-  rankContainer: {
-    justifyContent: 'center',
-  },
-  nameColumn: {
-    flex: 2,
-  },
-  scoreColumn: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  winsColumn: {
-    flex: 0.8,
-    alignItems: 'center',
-  },
-
-  // Leaderboard Row
-  leaderboardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    minHeight: TapTargets.minimum,
-  },
-  leaderboardRowBorder: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.separator,
-  },
-  eliminatedRow: {
-    opacity: 0.5,
-  },
-
-  // Rank Badges
-  rankBadgeGold: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.gold,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rankBadgeSilver: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#C0C0C0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rankBadgeBronze: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#CD7F32',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rankBadgeText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#000',
-  },
-  rankText: {
-    ...Typography.body,
-    fontWeight: '600',
-    color: colors.secondaryLabel,
-  },
-
-  // Player Info
-  playerName: {
-    ...Typography.body,
-    fontWeight: '500',
-    color: colors.label,
-  },
-  winnerTextStyle: {
-    color: colors.success,
-    fontWeight: '600',
-  },
-  eliminatedText: {
-    textDecorationLine: 'line-through',
-    color: colors.tertiaryLabel,
-  },
-  eliminatedLabel: {
-    ...Typography.caption2,
-    color: colors.destructive,
-    marginTop: 2,
-  },
-  scoreText: {
-    ...Typography.headline,
-    color: colors.label,
-  },
-  winsBadge: {
-    backgroundColor: colors.accent + '30',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.small,
-  },
-  winsText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.accent,
-  },
-
   // Round History
-  roundHistoryBadge: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: 10,
-    marginRight: Spacing.xs,
-  },
-  roundHistoryBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.label,
-  },
   roundCard: {
     backgroundColor: colors.cardBackground,
     borderRadius: BorderRadius.large,
@@ -742,20 +417,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   actionSection: {
     gap: Spacing.sm,
     marginTop: Spacing.md,
-  },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.tint,
-    borderRadius: BorderRadius.large,
-    padding: Spacing.lg,
-    gap: Spacing.sm,
-    minHeight: TapTargets.comfortable,
-  },
-  primaryButtonText: {
-    ...Typography.headline,
-    color: colors.label,
   },
 });
 

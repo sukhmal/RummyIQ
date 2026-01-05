@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Game, GameConfig, Player, Round, ScoreInput, SplitPotShare, SplitPotInfo } from '../types/game';
+import {
+  calculateSimpleScore,
+  isPlayerEliminated,
+  isInCompulsoryPlay,
+} from '../engine/scoring';
 
 interface GameContextType {
   currentGame: Game | null;
@@ -118,13 +123,12 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, [currentGame]);
 
   const calculateScore = (input: ScoreInput, config: GameConfig): number => {
-    if (input.hasInvalidDeclaration) {
-      return config.variant === 'pool' ? 80 : input.points;
-    }
-    if (input.isDeclared) {
-      return 0;
-    }
-    return input.points;
+    return calculateSimpleScore(
+      input.points,
+      input.isDeclared,
+      input.hasInvalidDeclaration || false,
+      config.variant
+    );
   };
 
   const addRound = (scores: ScoreInput[]) => {
@@ -153,16 +157,14 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       const roundScore = roundScores[player.id] || 0;
       const newScore = player.score + roundScore;
 
-      let isEliminated = player.isEliminated || false;
-      if (currentGame.config.variant === 'pool' && currentGame.config.poolLimit) {
-        // Player survives at exactly the limit, eliminated when exceeding it
-        isEliminated = newScore > currentGame.config.poolLimit;
-      }
-
       return {
         ...player,
         score: newScore,
-        isEliminated,
+        isEliminated: player.isEliminated || isPlayerEliminated(
+          newScore,
+          currentGame.config.variant,
+          currentGame.config.poolLimit
+        ),
       };
     });
 
@@ -248,10 +250,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         player.score += roundScore;
 
         // Check elimination for pool games
-        if (currentGame.config.variant === 'pool' && currentGame.config.poolLimit) {
-          if (player.score > currentGame.config.poolLimit) {
-            player.isEliminated = true;
-          }
+        if (isPlayerEliminated(player.score, currentGame.config.variant, currentGame.config.poolLimit)) {
+          player.isEliminated = true;
         }
       });
 
@@ -359,10 +359,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const player = currentGame.players.find(p => p.id === playerId);
     if (!player || player.isEliminated) return false;
 
-    const firstDropPenalty = currentGame.config.firstDropPenalty || 25;
-    const spaceLeft = currentGame.config.poolLimit - player.score;
-
-    return spaceLeft < firstDropPenalty;
+    return isInCompulsoryPlay(
+      player.score,
+      currentGame.config.poolLimit,
+      currentGame.config.firstDropPenalty || 25
+    );
   }, [currentGame]);
 
   // Check if eliminated players can rejoin
